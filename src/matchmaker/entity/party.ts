@@ -18,7 +18,7 @@ export class Party {
 
   @OneToMany(() => PlayerInParty, (t) => t.party, {
     eager: true,
-    cascade: true,
+    onDelete: "CASCADE"
   })
   players: Relation<PlayerInParty>[];
 

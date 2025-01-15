@@ -1,6 +1,7 @@
 import { EventBus, EventsHandler, IEventHandler } from "@nestjs/cqrs";
 import { PlayerEnterQueueRequestedEvent } from "@/gateway/events/mm/player-enter-queue-requested.event";
 import { PartyService } from "@/matchmaker/service/party.service";
+import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
 
 @EventsHandler(PlayerEnterQueueRequestedEvent)
 export class PlayerEnterQueueRequestedHandler
@@ -9,12 +10,12 @@ export class PlayerEnterQueueRequestedHandler
   constructor(
     private readonly ebus: EventBus,
     private readonly partyService: PartyService,
-    // @InjectRepository(Party)
-    // private readonly partyRepository: Repository<Party>,
+    private readonly queue: DbMatchmakingQueue,
   ) {}
 
   async handle(event: PlayerEnterQueueRequestedEvent) {
     const party = await this.partyService.getOrCreatePartyOf(event.id);
-    // Check if party good
+    // We can enter queue if
+    await this.queue.enterQueue(party, event.modes);
   }
 }

@@ -24,8 +24,6 @@ export class PartyService {
       .where("filterplayers.steam_id = :steamId", { steamId: steamId })
       .getOne();
 
-
-    console.log(JSON.stringify(party))
     if (!party) {
       party = await this.createParty(steamId);
     }

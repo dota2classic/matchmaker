@@ -10,6 +10,8 @@ import { Repository } from "typeorm";
 import { Party } from "@/matchmaker/entity/party";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
+import { Room } from "@/matchmaker/entity/room";
+import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 
 export interface TestEnvironment {
   module: TestingModule;
@@ -69,9 +71,7 @@ export async function createParty(
   leader: string = players[0],
 ): Promise<Party> {
   const pr: Repository<Party> = te.module.get(getRepositoryToken(Party));
-  const p = await pr.save({
-    queueModes: modes,
-  });
+  const p = await pr.save(new Party());
 
   const pip: Repository<Party> = te.module.get(
     getRepositoryToken(PlayerInParty),
@@ -80,6 +80,25 @@ export async function createParty(
     players.map((plr) => new PlayerInParty(plr, p.id, 0, plr === leader)),
   );
 
+  return p;
+}
+
+export async function createRoom(
+  te: TestEnvironment,
+  mode: MatchmakingMode,
+  parties: Party[],
+): Promise<Room> {
+  const pr: Repository<Room> = te.module.get(getRepositoryToken(Room));
+  const pir: Repository<PlayerInRoom> = te.module.get(
+    getRepositoryToken(PlayerInRoom),
+  );
+  const p = await pr.save(new Room(mode));
+
+  p.players = await pir.save(
+    parties
+      .flatMap((p) => p.players)
+      .map((pl) => new PlayerInRoom(p.id, pl.partyId, pl.steamId))
+  );
   return p;
 }
 

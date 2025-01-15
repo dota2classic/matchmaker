@@ -31,7 +31,6 @@ export class QueueService {
 
   @Cron(CronExpression.EVERY_10_SECONDS)
   public async cycle() {
-    console.log("Cycling..")
     try {
       await this.queue.setLocked(true);
       const entries = await this.queue.entries();
@@ -44,6 +43,8 @@ export class QueueService {
       await this.queue.setLocked(false);
     }
   }
+
+
 
   private async submitFoundGames(balances: GameBalance[]) {
     for (const balance of balances) {
@@ -150,4 +151,5 @@ export class QueueService {
 
     return comp1 + avgDiff;
   };
+
 }

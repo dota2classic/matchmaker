@@ -16,7 +16,10 @@ export class Room {
   @Column({ name: "lobby_type" })
   lobbyType: MatchmakingMode;
 
-  @OneToMany(() => PlayerInRoom, (p) => p.room, { eager: true })
+  @OneToMany(() => PlayerInRoom, (p) => p.room, {
+    eager: true,
+    onDelete: "CASCADE",
+  })
   players: Relation<PlayerInRoom>[];
 
   constructor(lobbyType: MatchmakingMode) {
