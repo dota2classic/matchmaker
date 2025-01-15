@@ -40,4 +40,9 @@ export class Party {
   get size(): number {
     return this.players.length;
   }
+
+
+  constructor(queueModes: MatchmakingMode[] = []) {
+    this.queueModes = queueModes;
+  }
 }

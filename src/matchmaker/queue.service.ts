@@ -50,7 +50,7 @@ export class QueueService {
     for (const balance of balances) {
       try {
         const room = await this.roomService.createRoom(balance);
-        await this.queue.removeEntries(balance.left.concat(balance.right));
+        await this.queue.leaveQueue(balance.left.concat(balance.right));
         // Ok we're good
         this.ebus.publish(new RoomFoundEvent(room.id, balance));
       } catch (e) {

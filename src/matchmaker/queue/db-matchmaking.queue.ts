@@ -1,13 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Any, DataSource, Repository } from "typeorm";
+import { Any, DataSource, In, Repository } from "typeorm";
 import { QueueMeta } from "@/matchmaker/entity/queue-meta";
 import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { EventBus } from "@nestjs/cqrs";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { QueueUpdatedEvent } from "@/gateway/events/queue-updated.event";
+import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 
 /**
  * Contracts:
@@ -36,10 +37,10 @@ export class DbMatchmakingQueue {
     if (isInRoom) return;
 
     await this.ds.transaction((em) => {
-      console.log(entry);
       entry.queueModes = modes;
       return em.save(entry);
     });
+    await this.partyUpdated(entry);
     await this.queueUpdated();
   }
 
@@ -55,12 +56,29 @@ export class DbMatchmakingQueue {
       .then((it) => it.isLocked);
   }
 
-  async removeEntries(entry: Party[]): Promise<void> {
-    await this.pr.delete(entry.map((it) => it.id));
-  }
+  async leaveQueue(_entries: Party[]): Promise<void> {
+    let entries = _entries.filter((entry) => entry.queueModes.length > 0);
+    entries.forEach((entry) => (entry.queueModes = []));
+    if (entries.length === 0) return;
 
-  async removeEntry(entry: Party): Promise<void> {
-    return this.removeEntries([entry]);
+    const updatedParties = await this.ds.transaction(async (em) => {
+      await em
+        .createQueryBuilder<Party>(Party, "p")
+        .update<Party>(Party)
+        .set({
+          queueModes: [],
+        })
+        .where({
+          id: In(entries.map((it) => it.id)),
+        })
+        .execute();
+
+      return entries;
+    });
+    // Nothing happened
+    console.log(updatedParties);
+    await this.partyUpdated(updatedParties);
+    await this.queueUpdated();
   }
 
   async setLocked(locked: boolean): Promise<void> {
@@ -97,5 +115,20 @@ export class DbMatchmakingQueue {
         res.map((raw) => ({ count: raw.count, lobby: Number(raw.lobby) })),
       ),
     );
+  }
+
+  private async partyUpdated(party: Party | Party[]) {
+    const parties = Array.isArray(party) ? party : [party];
+    parties
+      .map(
+        (party) =>
+          new PartyUpdatedEvent(
+            party.id,
+            party.players.find((t) => t.isLeader)!.steamId,
+            party.players.map((plr) => plr.steamId),
+            party.queueModes,
+          ),
+      )
+      .map((evt) => this.ebus.publish(evt));
   }
 }

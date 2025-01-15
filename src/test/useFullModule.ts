@@ -12,6 +12,8 @@ import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { Room } from "@/matchmaker/entity/room";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
+import SpyInstance = jest.SpyInstance;
+import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 
 export interface TestEnvironment {
   module: TestingModule;
@@ -71,7 +73,7 @@ export async function createParty(
   leader: string = players[0],
 ): Promise<Party> {
   const pr: Repository<Party> = te.module.get(getRepositoryToken(Party));
-  const p = await pr.save(new Party());
+  const p = await pr.save(new Party(modes));
 
   const pip: Repository<Party> = te.module.get(
     getRepositoryToken(PlayerInParty),
@@ -109,6 +111,17 @@ export async function createParties(
 ): Promise<Party[]> {
   return Promise.all(
     Array.from({ length: cnt }, () => createParty(te, modes, [testUser()])),
+  );
+}
+
+export function expectPartyUpdate(spy: SpyInstance, party: Party, modes: MatchmakingMode[] = party.queueModes){
+  expect(spy).toHaveBeenCalledWith(
+    new PartyUpdatedEvent(
+      party.id,
+      party.players[0].steamId,
+      party.players.map((it) => it.steamId),
+      modes,
+    ),
   );
 }
 
