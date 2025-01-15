@@ -12,8 +12,10 @@ import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { Room } from "@/matchmaker/entity/room";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
-import SpyInstance = jest.SpyInstance;
 import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
+import { QueueMeta } from "@/matchmaker/entity/queue-meta";
+import { Dota2Version } from "@/gateway/shared-types/dota2version";
+import SpyInstance = jest.SpyInstance;
 
 export interface TestEnvironment {
   module: TestingModule;
@@ -99,7 +101,7 @@ export async function createRoom(
   p.players = await pir.save(
     parties
       .flatMap((p) => p.players)
-      .map((pl) => new PlayerInRoom(p.id, pl.partyId, pl.steamId))
+      .map((pl) => new PlayerInRoom(p.id, pl.partyId, pl.steamId)),
   );
   return p;
 }
@@ -114,7 +116,11 @@ export async function createParties(
   );
 }
 
-export function expectPartyUpdate(spy: SpyInstance, party: Party, modes: MatchmakingMode[] = party.queueModes){
+export function expectPartyUpdate(
+  spy: SpyInstance,
+  party: Party,
+  modes: MatchmakingMode[] = party.queueModes,
+) {
   expect(spy).toHaveBeenCalledWith(
     new PartyUpdatedEvent(
       party.id,
@@ -125,6 +131,18 @@ export function expectPartyUpdate(spy: SpyInstance, party: Party, modes: Matchma
   );
 }
 
+export async function setQueueLocked(te: TestEnvironment, locked: boolean) {
+  const repo: Repository<QueueMeta> = te.module.get(
+    getRepositoryToken(QueueMeta),
+  );
+  await repo.upsert(
+    {
+      version: Dota2Version.Dota_684,
+      isLocked: locked,
+    },
+    ["version"],
+  );
+}
 export function testUser(): string {
   return Math.round(Math.random() * 1000000).toString();
 }

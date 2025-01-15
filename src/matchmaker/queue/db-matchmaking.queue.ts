@@ -13,6 +13,7 @@ import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 /**
  * Contracts:
  * 1) Party can't have modes != [] if in room
+ * 2) Can't mutate queue if it is locked
  */
 @Injectable()
 export class DbMatchmakingQueue {
@@ -28,6 +29,7 @@ export class DbMatchmakingQueue {
   ) {}
 
   async enterQueue(entry: Party, modes: MatchmakingMode[]): Promise<void> {
+    if (await this.isLocked()) return;
     // Contract #1
     const isInRoom = await this.playerInRoomRepository.exists({
       where: {
@@ -49,14 +51,16 @@ export class DbMatchmakingQueue {
   }
 
   async isLocked(): Promise<boolean> {
-    return this.queueMetaRepository
-      .findOneOrFail({
-        where: { version: Dota2Version.Dota_684 },
-      })
-      .then((it) => it.isLocked);
+    const isQueueUnlocked = await this.queueMetaRepository.exists({
+      where: { version: Dota2Version.Dota_684, isLocked: false },
+    });
+
+    return !isQueueUnlocked;
   }
 
   async leaveQueue(_entries: Party[]): Promise<void> {
+    if (await this.isLocked()) return;
+
     let entries = _entries.filter((entry) => entry.queueModes.length > 0);
     entries.forEach((entry) => (entry.queueModes = []));
     if (entries.length === 0) return;
@@ -76,19 +80,17 @@ export class DbMatchmakingQueue {
       return entries;
     });
     // Nothing happened
-    console.log(updatedParties);
     await this.partyUpdated(updatedParties);
     await this.queueUpdated();
   }
 
   async setLocked(locked: boolean): Promise<void> {
-    await this.queueMetaRepository.update(
+    await this.queueMetaRepository.upsert(
       {
         version: Dota2Version.Dota_684,
-      },
-      {
         isLocked: locked,
       },
+      ["version"],
     );
   }
 
