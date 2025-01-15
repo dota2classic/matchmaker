@@ -179,7 +179,27 @@ describe("DbMatchmakingQueue", () => {
       expect(spy).toHaveBeenCalledTimes(0);
     });
   });
+
   describe("locks", () => {
-    it("should ", () => {});
+    it("should lock", async () => {
+      await q.setLocked(true);
+      await expect(q.isLocked()).resolves.toEqual(true);
+
+      await q.setLocked(false);
+      await expect(q.isLocked()).resolves.toEqual(false);
+    });
+  });
+
+  describe("entries", () => {
+    it("should return all entries in queue", async () => {
+      const p1 = await createParty(te, [], [testUser()]);
+      const p2 = await createParty(
+        te,
+        [MatchmakingMode.BOTS_2X2],
+        [testUser()],
+      );
+
+      await expect(q.entries()).resolves.toEqual(expect.arrayContaining([p2]));
+    });
   });
 });
