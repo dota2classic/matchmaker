@@ -4,4 +4,10 @@ import { QueueMeta } from "@/matchmaker/entity/queue-meta";
 import { Room } from "@/matchmaker/entity/room";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 
-export default [Party, PlayerInParty, QueueMeta, Room, PlayerInRoom];
+export default [
+  Party,
+  PlayerInParty,
+  QueueMeta,
+  Room,
+  PlayerInRoom,
+];

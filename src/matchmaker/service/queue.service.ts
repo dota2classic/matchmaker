@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { findBestMatchBy } from "./balance/perms";
-import { GameBalance } from "./balance/game-balance";
-import { BalanceConfig } from "./balance/balance-config";
+import { findBestMatchBy } from "../balance/perms";
+import { GameBalance } from "../balance/game-balance";
+import { BalanceConfig } from "../balance/balance-config";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { Party } from "@/matchmaker/entity/party";
 import { Cron, CronExpression } from "@nestjs/schedule";
@@ -44,8 +44,6 @@ export class QueueService {
     }
   }
 
-
-
   private async submitFoundGames(balances: GameBalance[]) {
     for (const balance of balances) {
       try {
@@ -66,7 +64,9 @@ export class QueueService {
 
     for (const balanceConfig of tasks) {
       const balances = await this.findAllGames(
-        totalPool.filter((t) => t.queueModes.includes(balanceConfig.mode)),
+        totalPool.filter((t) =>
+          t.queueModes.includes(balanceConfig.mode),
+        ),
         balanceConfig,
       );
 
@@ -151,5 +151,4 @@ export class QueueService {
 
     return comp1 + avgDiff;
   };
-
 }

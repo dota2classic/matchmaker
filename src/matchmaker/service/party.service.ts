@@ -2,8 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, Repository } from "typeorm";
+import { DataSource, In, Repository } from "typeorm";
 import { PlayerService } from "@/matchmaker/service/player.service";
+import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
 
 @Injectable()
 export class PartyService {
@@ -14,6 +15,7 @@ export class PartyService {
     private readonly playerInPartyRepository: Repository<PlayerInParty>,
     private readonly datasource: DataSource,
     private readonly playerService: PlayerService,
+    private readonly queue: DbMatchmakingQueue,
   ) {}
 
   public async getOrCreatePartyOf(steamId: string) {
@@ -53,5 +55,15 @@ export class PartyService {
       );
       return p;
     });
+  }
+
+  async returnToQueues(goodPartyIds: string[]) {
+    const parties = await this.partyRepository.find({
+      where: {
+        id: In(goodPartyIds),
+      },
+    });
+
+    await Promise.all(parties.map((party) => this.queue.enterQueue(party)));
   }
 }

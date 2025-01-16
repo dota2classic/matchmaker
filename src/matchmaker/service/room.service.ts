@@ -9,6 +9,7 @@ import { ReadyState } from "@/gateway/events/ready-state-received.event";
 import { EventBus } from "@nestjs/cqrs";
 import { PlayerDeclinedGameEvent } from "@/gateway/events/mm/player-declined-game.event";
 import { PlayerId } from "@/gateway/shared-types/player-id";
+import { PartyService } from "@/matchmaker/service/party.service";
 
 @Injectable()
 export class RoomService {
@@ -17,6 +18,8 @@ export class RoomService {
     private readonly roomRepository: Repository<Room>,
     private readonly datasource: DataSource,
     private readonly ebus: EventBus,
+    private readonly partyService: PartyService
+
   ) {}
 
   public createRoom(balance: GameBalance): Promise<Room> {
@@ -62,22 +65,23 @@ export class RoomService {
       (t) => t.readyState !== ReadyState.READY,
     );
 
-
-    if(notAccepted.length > 0) {
+    if (notAccepted.length > 0) {
       // Report bad piggies
-
-      // Return good piggies to their queues
-
-
       for (const plr of notAccepted) {
         this.ebus.publish(
-          new PlayerDeclinedGameEvent(new PlayerId(plr.steamId), room.lobbyType),
+          new PlayerDeclinedGameEvent(
+            new PlayerId(plr.steamId),
+            room.lobbyType,
+          ),
         );
       }
 
+      // Return good piggies to their queues
+      const goodPartyIds = new Set<string>();
+      accepted.forEach((plr) => goodPartyIds.add(plr.partyId));
+      await this.partyService.returnToQueues(Array.from(goodPartyIds))
+
+
     }
-
   }
-
-
 }

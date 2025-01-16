@@ -1,15 +1,12 @@
 import {
   Column,
   Entity,
-  JoinColumn,
-  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   Relation,
 } from "typeorm";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
-import { Room } from "@/matchmaker/entity/room";
 
 @Entity("party")
 export class Party {
@@ -18,7 +15,7 @@ export class Party {
 
   @OneToMany(() => PlayerInParty, (t) => t.party, {
     eager: true,
-    onDelete: "CASCADE"
+    onDelete: "CASCADE",
   })
   players: Relation<PlayerInParty>[];
 
@@ -37,12 +34,10 @@ export class Party {
   })
   queueModes: MatchmakingMode[];
 
+  @Column({ name: "in_queue", default: false })
+  inQueue: boolean;
+
   get size(): number {
     return this.players.length;
-  }
-
-
-  constructor(queueModes: MatchmakingMode[] = []) {
-    this.queueModes = queueModes;
   }
 }

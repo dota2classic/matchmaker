@@ -6,9 +6,8 @@ import { PartyService } from "@/matchmaker/service/party.service";
 import { CqrsModule } from "@nestjs/cqrs";
 import { PlayerService } from "@/matchmaker/service/player.service";
 import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
-import { ScheduleModule } from "@nestjs/schedule";
 import { RoomService } from "@/matchmaker/service/room.service";
-import { QueueService } from "@/matchmaker/queue.service";
+import { QueueService } from "@/matchmaker/service/queue.service";
 
 const EventHandlers = [PlayerEnterQueueRequestedHandler];
 @Module({

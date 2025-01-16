@@ -28,21 +28,22 @@ export class DbMatchmakingQueue {
     private readonly ds: DataSource,
   ) {}
 
-  async enterQueue(entry: Party, modes: MatchmakingMode[]): Promise<void> {
+  async enterQueue(party: Party, modes: MatchmakingMode[] = party.queueModes): Promise<void> {
     if (await this.isLocked()) return;
     // Contract #1
     const isInRoom = await this.playerInRoomRepository.exists({
       where: {
-        steamId: Any(entry.players.map((plr) => plr.steamId)),
+        steamId: Any(party.players.map((plr) => plr.steamId)),
       },
     });
     if (isInRoom) return;
 
     await this.ds.transaction((em) => {
-      entry.queueModes = modes;
-      return em.save(entry);
+      party.inQueue = true;
+      party.queueModes = modes;
+      return em.save(party);
     });
-    await this.partyUpdated(entry);
+    await this.partyUpdated(party);
     await this.queueUpdated();
   }
 
@@ -61,8 +62,7 @@ export class DbMatchmakingQueue {
   async leaveQueue(_entries: Party[]): Promise<void> {
     if (await this.isLocked()) return;
 
-    let entries = _entries.filter((entry) => entry.queueModes.length > 0);
-    entries.forEach((entry) => (entry.queueModes = []));
+    let entries = _entries.filter((entry) => entry.inQueue);
     if (entries.length === 0) return;
 
     const updatedParties = await this.ds.transaction(async (em) => {
@@ -70,7 +70,7 @@ export class DbMatchmakingQueue {
         .createQueryBuilder<Party>(Party, "p")
         .update<Party>(Party)
         .set({
-          queueModes: [],
+          inQueue: false,
         })
         .where({
           id: In(entries.map((it) => it.id)),
@@ -129,6 +129,7 @@ export class DbMatchmakingQueue {
             party.players.find((t) => t.isLeader)!.steamId,
             party.players.map((plr) => plr.steamId),
             party.queueModes,
+            party.inQueue,
           ),
       )
       .map((evt) => this.ebus.publish(evt));

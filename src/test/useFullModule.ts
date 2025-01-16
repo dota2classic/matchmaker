@@ -46,7 +46,7 @@ export function useFullModule(): TestEnvironment {
 
           type: "postgres",
           database: "postgres",
-          logging: true,
+          // logging: true,
 
           username: te.containers.pg.getUsername(),
           password: te.containers.pg.getPassword(),
@@ -72,10 +72,11 @@ export async function createParty(
   te: TestEnvironment,
   modes: MatchmakingMode[],
   players: string[],
+  inQueue: boolean = false,
   leader: string = players[0],
 ): Promise<Party> {
   const pr: Repository<Party> = te.module.get(getRepositoryToken(Party));
-  const p = await pr.save(new Party(modes));
+  const p = await pr.save(new Party());
 
   const pip: Repository<Party> = te.module.get(
     getRepositoryToken(PlayerInParty),
@@ -83,6 +84,7 @@ export async function createParty(
   p.players = await pip.save(
     players.map((plr) => new PlayerInParty(plr, p.id, 0, plr === leader)),
   );
+  p.inQueue = inQueue;
 
   return p;
 }
@@ -119,6 +121,7 @@ export async function createParties(
 export function expectPartyUpdate(
   spy: SpyInstance,
   party: Party,
+  inQueue: boolean,
   modes: MatchmakingMode[] = party.queueModes,
 ) {
   expect(spy).toHaveBeenCalledWith(
@@ -127,6 +130,7 @@ export function expectPartyUpdate(
       party.players[0].steamId,
       party.players.map((it) => it.steamId),
       modes,
+      inQueue
     ),
   );
 }

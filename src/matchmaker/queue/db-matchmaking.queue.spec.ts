@@ -65,7 +65,7 @@ describe("DbMatchmakingQueue", () => {
         } satisfies QueueUpdatedEvent),
       );
 
-      expectPartyUpdate(spy, party, [
+      expectPartyUpdate(spy, party, true, [
         MatchmakingMode.UNRANKED,
         MatchmakingMode.BOTS_2X2,
       ]);
@@ -90,7 +90,7 @@ describe("DbMatchmakingQueue", () => {
           ]),
         );
 
-        expectPartyUpdate(spy, party, [mode]);
+        expectPartyUpdate(spy, party, true, [mode]);
       },
     );
 
@@ -125,18 +125,28 @@ describe("DbMatchmakingQueue", () => {
   describe("leaveQueue", () => {
     it("should update party and queue if actually left from queue", async () => {
       // given
-      const p = await createParty(te, [MatchmakingMode.UNRANKED], [testUser()]);
+      const p = await createParty(
+        te,
+        [MatchmakingMode.UNRANKED],
+        [testUser()],
+        true,
+      );
 
       // when
       await q.leaveQueue([p]);
 
       // then
-      expectPartyUpdate(spy, p, []);
+      expectPartyUpdate(spy, p, true, []);
     });
 
     it("should not update party and queue if nobody left from queue", async () => {
       // given
-      const p = await createParty(te, [], [testUser()]);
+      const p = await createParty(
+        te,
+        [MatchmakingMode.BOTS_2X2],
+        [testUser()],
+        false,
+      );
 
       // when
       await q.leaveQueue([p]);
@@ -152,6 +162,7 @@ describe("DbMatchmakingQueue", () => {
         te,
         [MatchmakingMode.UNRANKED],
         [testUser()],
+        true,
       );
 
       // when
@@ -159,7 +170,7 @@ describe("DbMatchmakingQueue", () => {
 
       // then
       expect(spy).toHaveBeenCalledTimes(2);
-      expectPartyUpdate(spy, p2, []);
+      expectPartyUpdate(spy, p2, true, []);
       expect(spy).toHaveBeenCalledWith(new QueueUpdatedEvent([]));
     });
 
