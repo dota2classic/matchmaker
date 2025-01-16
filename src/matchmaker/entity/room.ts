@@ -22,6 +22,20 @@ export class Room {
   })
   players: Relation<PlayerInRoom>[];
 
+  @Column({
+    type: "timestamptz",
+    name: "ready_check_started_at",
+    default: "now()",
+  })
+  readyCheckStartedAt: Date;
+
+  @Column({
+    type: "timestamptz",
+    name: "ready_check_finished_at",
+    nullable: true,
+  })
+  readyCheckFinishedAt?: Date;
+
   constructor(lobbyType: MatchmakingMode) {
     this.lobbyType = lobbyType;
   }
