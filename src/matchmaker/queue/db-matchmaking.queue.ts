@@ -19,7 +19,7 @@ import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 export class DbMatchmakingQueue {
   constructor(
     @InjectRepository(Party)
-    private readonly pr: Repository<Party>,
+    private readonly partyRepository: Repository<Party>,
     @InjectRepository(QueueMeta)
     private readonly queueMetaRepository: Repository<QueueMeta>,
     @InjectRepository(PlayerInRoom)
@@ -51,7 +51,7 @@ export class DbMatchmakingQueue {
   }
 
   async entries(): Promise<Party[]> {
-    return this.pr.find();
+    return this.partyRepository.find({ where: { inQueue: true } });
   }
 
   // Queue is locked by default until is locked manually
@@ -65,6 +65,7 @@ export class DbMatchmakingQueue {
     if (await this.isLocked()) return;
 
     let entries = _entries.filter((entry) => entry.inQueue);
+    entries.forEach((entry) => (entry.inQueue = false));
     if (entries.length === 0) return;
 
     const updatedParties = await this.ds.transaction(async (em) => {
@@ -102,10 +103,11 @@ export class DbMatchmakingQueue {
     const res: { lobby: string; count: number }[] = await this.ds
       .createQueryBuilder()
       .addCommonTableExpression(
-        this.pr
+        this.partyRepository
           .createQueryBuilder("p")
           .select("p.id", "id")
-          .addSelect("unnest(p.queue_modes)", "lobby_type"),
+          .addSelect("unnest(p.queue_modes)", "lobby_type")
+          .where("p.inQueue"),
         "modes",
       )
       .select("modes.lobby_type::party_queue_modes_enum", "lobby")

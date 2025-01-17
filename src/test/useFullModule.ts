@@ -88,7 +88,11 @@ export async function createParty(
   leader: string = players[0],
 ): Promise<Party> {
   const pr: Repository<Party> = te.module.get(getRepositoryToken(Party));
-  const p = await pr.save(new Party());
+
+  let p = new Party();
+  p.queueModes = modes;
+  p.inQueue = inQueue;
+  p = await pr.save(p);
 
   const pip: Repository<Party> = te.module.get(
     getRepositoryToken(PlayerInParty),
@@ -96,7 +100,6 @@ export async function createParty(
   p.players = await pip.save(
     players.map((plr) => new PlayerInParty(plr, p.id, 0, plr === leader)),
   );
-  p.inQueue = inQueue;
 
   return p;
 }
@@ -135,8 +138,10 @@ export function expectPartyUpdate(
   party: Party,
   inQueue: boolean,
   modes: MatchmakingMode[] = party.queueModes,
+  nth = 1
 ) {
-  expect(spy).toHaveBeenCalledWith(
+  expect(spy).toHaveBeenNthCalledWith(
+    nth,
     new PartyUpdatedEvent(
       party.id,
       party.players[0].steamId,

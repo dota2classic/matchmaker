@@ -14,6 +14,7 @@ import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import SpyInstance = jest.SpyInstance;
+import { v4 } from "uuid";
 
 describe("RoomCreatedHandler", () => {
   const te = useFullModule();
@@ -33,7 +34,7 @@ describe("RoomCreatedHandler", () => {
     // when
     await handler.handle(
       new RoomCreatedEvent(
-        "room1",
+        v4(),
         new GameBalance(MatchmakingMode.BOTS_2X2, [], []),
       ),
     );

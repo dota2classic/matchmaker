@@ -45,6 +45,7 @@ export class QueueService {
   }
 
   private async submitFoundGames(balances: GameBalance[]) {
+    console.log(balances)
     for (const balance of balances) {
       try {
         const room = await this.roomService.createRoom(balance);
@@ -69,6 +70,8 @@ export class QueueService {
         ),
         balanceConfig,
       );
+
+
 
       foundGames.push(...balances);
       const partiesToRemove = balances.flatMap((t) =>

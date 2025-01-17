@@ -136,7 +136,7 @@ describe("DbMatchmakingQueue", () => {
       await q.leaveQueue([p]);
 
       // then
-      expectPartyUpdate(spy, p, true, []);
+      expectPartyUpdate(spy, p, false, [MatchmakingMode.UNRANKED]);
     });
 
     it("should not update party and queue if nobody left from queue", async () => {
@@ -170,8 +170,8 @@ describe("DbMatchmakingQueue", () => {
 
       // then
       expect(spy).toHaveBeenCalledTimes(2);
-      expectPartyUpdate(spy, p2, true, []);
-      expect(spy).toHaveBeenCalledWith(new QueueUpdatedEvent([]));
+      expectPartyUpdate(spy, p2, false, [MatchmakingMode.UNRANKED]);
+      expect(spy).toHaveBeenNthCalledWith(2, new QueueUpdatedEvent([]));
     });
 
     it("should not update if queue is locked", async () => {
@@ -208,9 +208,20 @@ describe("DbMatchmakingQueue", () => {
         te,
         [MatchmakingMode.BOTS_2X2],
         [testUser()],
+        true,
       );
 
-      await expect(q.entries()).resolves.toEqual(expect.arrayContaining([p2]));
+      const entries = await q.entries();
+      await expect(entries).toEqual([p2]);
+    });
+
+    it("should ignore parties that are not in queue", async () => {
+      await createParty(te, [], [testUser()]);
+      await createParty(te, [], [testUser()]);
+      await createParty(te, [], [testUser()]);
+
+      const entries = await q.entries();
+      await expect(entries).toEqual([]);
     });
   });
 });

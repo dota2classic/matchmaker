@@ -15,11 +15,12 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
   ) {}
 
   async handle(event: RoomCreatedEvent) {
-    const room = await this.roomRepository.findOneOrFail({
+    const room = await this.roomRepository.findOne({
       where: {
         id: event.id,
       },
     });
+    if (!room) return;
     await this.readyCheckService.startReadyCheck(room);
   }
 }
