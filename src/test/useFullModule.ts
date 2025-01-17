@@ -16,6 +16,7 @@ import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 import { QueueMeta } from "@/matchmaker/entity/queue-meta";
 import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { EventBus } from "@nestjs/cqrs";
+import { DotaTeam } from "@/gateway/shared-types/dota-team";
 import SpyInstance = jest.SpyInstance;
 
 export interface TestEnvironment {
@@ -107,7 +108,8 @@ export async function createParty(
 export async function createRoom(
   te: TestEnvironment,
   mode: MatchmakingMode,
-  parties: Party[],
+  radiantParties: Party[],
+  direParties: Party[] = [],
 ): Promise<Room> {
   const pr: Repository<Room> = te.module.get(getRepositoryToken(Room));
   const pir: Repository<PlayerInRoom> = te.module.get(
@@ -115,11 +117,20 @@ export async function createRoom(
   );
   const p = await pr.save(new Room(mode));
 
-  p.players = await pir.save(
-    parties
-      .flatMap((p) => p.players)
-      .map((pl) => new PlayerInRoom(p.id, pl.partyId, pl.steamId)),
-  );
+  const players = radiantParties
+    .flatMap((p) => p.players)
+    .map(
+      (pl) => new PlayerInRoom(p.id, pl.partyId, pl.steamId, DotaTeam.RADIANT),
+    )
+    .concat(
+      direParties
+        .flatMap((p) => p.players)
+        .map(
+          (pl) => new PlayerInRoom(p.id, pl.partyId, pl.steamId, DotaTeam.DIRE),
+        ),
+    );
+
+  p.players = await pir.save(players);
   return p;
 }
 
@@ -138,7 +149,7 @@ export function expectPartyUpdate(
   party: Party,
   inQueue: boolean,
   modes: MatchmakingMode[] = party.queueModes,
-  nth = 1
+  nth = 1,
 ) {
   expect(spy).toHaveBeenNthCalledWith(
     nth,

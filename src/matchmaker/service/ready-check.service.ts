@@ -4,11 +4,14 @@ import { ReadyState } from "@/gateway/events/ready-state-received.event";
 import { ReadyCheckStartedEvent } from "@/gateway/events/ready-check-started.event";
 import { ACCEPT_GAME_TIMEOUT } from "@/gateway/shared-types/timings";
 import { PlayerDeclinedGameEvent } from "@/gateway/events/mm/player-declined-game.event";
-import { PlayerId } from "@/gateway/shared-types/player-id";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { EventBus } from "@nestjs/cqrs";
 import { PartyService } from "@/matchmaker/service/party.service";
+import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
+import { MatchPlayer, RoomReadyEvent } from "@/gateway/events/room-ready.event";
+import { PlayerId } from "@/gateway/shared-types/player-id";
+import { Dota2Version } from "@/gateway/shared-types/dota2version";
 
 @Injectable()
 export class ReadyCheckService {
@@ -64,33 +67,58 @@ export class ReadyCheckService {
       { readyCheckFinishedAt: new Date() },
     );
 
+    // Delete room, not needed anymore
+    await this.roomRepository.delete({ id: room.id });
+
+    const [accepted, notAccepted] = this.readyCheckResult(room);
+
+    if (notAccepted.length > 0) {
+      await this.onFailedRoom(room, accepted, notAccepted);
+    } else {
+      await this.onSucceededRoom(room);
+    }
+  }
+
+  private async onFailedRoom(
+    room: Room,
+    accepted: PlayerInRoom[],
+    notAccepted: PlayerInRoom[],
+  ) {
+    // Report bad piggies
+    for (const plr of notAccepted) {
+      this.ebus.publish(
+        new PlayerDeclinedGameEvent(plr.steamId, room.lobbyType),
+      );
+    }
+
+    // Return good piggies to their queues
+    const goodPartyIds = new Set<string>();
+    accepted.forEach((plr) => goodPartyIds.add(plr.partyId));
+    await this.partyService.returnToQueues(Array.from(goodPartyIds));
+  }
+
+  private async onSucceededRoom(room: Room) {
+    // We are done here! just emit event
+    this.ebus.publish(
+      new RoomReadyEvent(
+        room.id,
+        room.lobbyType,
+        room.players.map(
+          (plr) =>
+            new MatchPlayer(new PlayerId(plr.steamId), plr.team, plr.partyId),
+        ),
+        Dota2Version.Dota_684,
+      ),
+    );
+  }
+
+  private readyCheckResult(room: Room): [PlayerInRoom[], PlayerInRoom[]] {
     const accepted = room.players.filter(
       (t) => t.readyState === ReadyState.READY,
     );
     const notAccepted = room.players.filter(
       (t) => t.readyState !== ReadyState.READY,
     );
-
-    // Delete room, not needed anymore
-    await this.roomRepository.delete({ id: room.id });
-
-    if (notAccepted.length > 0) {
-      await this.datasource.transaction(async (em) => {});
-
-      // Report bad piggies
-      for (const plr of notAccepted) {
-        this.ebus.publish(
-          new PlayerDeclinedGameEvent(
-            plr.steamId,
-            room.lobbyType,
-          ),
-        );
-      }
-
-      // Return good piggies to their queues
-      const goodPartyIds = new Set<string>();
-      accepted.forEach((plr) => goodPartyIds.add(plr.partyId));
-      await this.partyService.returnToQueues(Array.from(goodPartyIds));
-    }
+    return [accepted, notAccepted];
   }
 }

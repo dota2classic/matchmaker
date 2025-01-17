@@ -11,6 +11,7 @@ import {
 import { Room } from "@/matchmaker/entity/room";
 import { Party } from "@/matchmaker/entity/party";
 import { ReadyState } from "@/gateway/events/ready-state-received.event";
+import { DotaTeam } from "@/gateway/shared-types/dota-team";
 
 @Entity()
 @Index("max_one_room_for_player", ["steamId"], { unique: true })
@@ -47,9 +48,17 @@ export class PlayerInRoom {
   })
   readyState: ReadyState;
 
-  constructor(roomId: string, partyId: string, steamId: string) {
+  @Column({
+    type: "enum",
+    name: "team",
+    enum: DotaTeam,
+  })
+  team: DotaTeam;
+
+  constructor(roomId: string, partyId: string, steamId: string, team: DotaTeam) {
     this.roomId = roomId;
     this.partyId = partyId;
     this.steamId = steamId;
+    this.team = team;
   }
 }

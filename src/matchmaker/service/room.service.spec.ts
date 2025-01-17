@@ -9,11 +9,10 @@ import { Party } from "@/matchmaker/entity/party";
 import { v4 } from "uuid";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
-import SpyInstance = jest.SpyInstance;
+import { DotaTeam } from "@/gateway/shared-types/dota-team";
 
 describe("RoomService", () => {
   const te = useFullModule();
-  let spy: SpyInstance;
 
   describe("createRoom", () => {
     it("should succeed when parties exist", async () => {
@@ -40,11 +39,10 @@ describe("RoomService", () => {
             roomId: room.id,
             steamId: party.players[0].steamId,
             readyState: ReadyState.PENDING,
+            team: expect.any(Number)
           })),
         } satisfies DeepPartial<Room>),
       );
-
-
     });
 
     it("should fail if parties dont exist", async () => {
@@ -85,7 +83,12 @@ describe("RoomService", () => {
       const room = await r.save(new Room(MatchmakingMode.UNRANKED));
 
       await pir.save(
-        new PlayerInRoom(room.id, parties[0].id, parties[0].players[0].steamId),
+        new PlayerInRoom(
+          room.id,
+          parties[0].id,
+          parties[0].players[0].steamId,
+          DotaTeam.RADIANT,
+        ),
       );
 
       // when
