@@ -15,6 +15,7 @@ import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 import { QueueMeta } from "@/matchmaker/entity/queue-meta";
 import { Dota2Version } from "@/gateway/shared-types/dota2version";
+import { EventBus } from "@nestjs/cqrs";
 import SpyInstance = jest.SpyInstance;
 
 export interface TestEnvironment {
@@ -22,6 +23,8 @@ export interface TestEnvironment {
   containers: {
     pg: StartedPostgreSqlContainer;
   };
+  ebus: EventBus;
+  ebusSpy: SpyInstance;
 }
 
 export function useFullModule(): TestEnvironment {
@@ -30,7 +33,13 @@ export function useFullModule(): TestEnvironment {
   const te: TestEnvironment = {
     module: undefined as unknown as any,
     containers: {} as unknown as any,
+    ebus: {} as unknown as any,
+    ebusSpy: {} as unknown as any,
   };
+
+  afterEach(() => {
+    te.ebusSpy.mockReset();
+  });
 
   beforeAll(async () => {
     te.containers.pg = await new PostgreSqlContainer()
@@ -59,6 +68,9 @@ export function useFullModule(): TestEnvironment {
         MatchmakerModule,
       ],
     }).compile();
+
+    te.ebus = te.module.get(EventBus);
+    te.ebusSpy = jest.spyOn(te.ebus, "publish");
   });
 
   afterAll(async () => {
@@ -130,7 +142,7 @@ export function expectPartyUpdate(
       party.players[0].steamId,
       party.players.map((it) => it.steamId),
       modes,
-      inQueue
+      inQueue,
     ),
   );
 }

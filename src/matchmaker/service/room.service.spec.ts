@@ -9,9 +9,11 @@ import { Party } from "@/matchmaker/entity/party";
 import { v4 } from "uuid";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
+import SpyInstance = jest.SpyInstance;
 
 describe("RoomService", () => {
   const te = useFullModule();
+  let spy: SpyInstance;
 
   describe("createRoom", () => {
     it("should succeed when parties exist", async () => {
@@ -41,6 +43,8 @@ describe("RoomService", () => {
           })),
         } satisfies DeepPartial<Room>),
       );
+
+
     });
 
     it("should fail if parties dont exist", async () => {

@@ -40,4 +40,8 @@ export class Party {
   get size(): number {
     return this.players.length;
   }
+
+  get leader(): string {
+    return this.players.find((t) => t.isLeader)!.steamId;
+  }
 }

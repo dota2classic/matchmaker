@@ -7,7 +7,7 @@ import { Party } from "@/matchmaker/entity/party";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { EventBus } from "@nestjs/cqrs";
 import { RoomService } from "@/matchmaker/service/room.service";
-import { RoomFoundEvent } from "@/matchmaker/event/room-found.event";
+import { RoomCreatedEvent } from "@/matchmaker/event/room-created.event";
 import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
 
 @Injectable()
@@ -50,7 +50,7 @@ export class QueueService {
         const room = await this.roomService.createRoom(balance);
         await this.queue.leaveQueue(balance.left.concat(balance.right));
         // Ok we're good
-        this.ebus.publish(new RoomFoundEvent(room.id, balance));
+        this.ebus.publish(new RoomCreatedEvent(room.id, balance));
       } catch (e) {
         this.logger.warn("There was an issue creating room", e);
       }

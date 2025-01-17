@@ -28,7 +28,10 @@ export class DbMatchmakingQueue {
     private readonly ds: DataSource,
   ) {}
 
-  async enterQueue(party: Party, modes: MatchmakingMode[] = party.queueModes): Promise<void> {
+  async enterQueue(
+    party: Party,
+    modes: MatchmakingMode[] = party.queueModes,
+  ): Promise<void> {
     if (await this.isLocked()) return;
     // Contract #1
     const isInRoom = await this.playerInRoomRepository.exists({
@@ -51,12 +54,11 @@ export class DbMatchmakingQueue {
     return this.pr.find();
   }
 
+  // Queue is locked by default until is locked manually
   async isLocked(): Promise<boolean> {
-    const isQueueUnlocked = await this.queueMetaRepository.exists({
-      where: { version: Dota2Version.Dota_684, isLocked: false },
+    return this.queueMetaRepository.exists({
+      where: { version: Dota2Version.Dota_684, isLocked: true },
     });
-
-    return !isQueueUnlocked;
   }
 
   async leaveQueue(_entries: Party[]): Promise<void> {

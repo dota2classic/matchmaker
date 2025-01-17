@@ -15,7 +15,7 @@ import { ReadyState } from "@/gateway/events/ready-state-received.event";
 @Entity()
 @Index("max_one_room_for_player", ["steamId"], { unique: true })
 export class PlayerInRoom {
-  @ManyToOne(() => Room, (t) => t.players, {})
+  @ManyToOne(() => Room, (t) => t.players, { onDelete: "CASCADE" })
   @JoinColumn({
     referencedColumnName: "id",
     name: "room_id",

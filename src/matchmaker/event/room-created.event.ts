@@ -1,6 +1,6 @@
 import { GameBalance } from "@/matchmaker/balance/game-balance";
 
-export class RoomFoundEvent {
+export class RoomCreatedEvent {
   constructor(
     public readonly id: string,
     public readonly balance: GameBalance,

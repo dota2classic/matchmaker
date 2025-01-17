@@ -10,6 +10,7 @@ import { EventBus } from "@nestjs/cqrs";
 import { PlayerDeclinedGameEvent } from "@/gateway/events/mm/player-declined-game.event";
 import { PlayerId } from "@/gateway/shared-types/player-id";
 import { PartyService } from "@/matchmaker/service/party.service";
+import { ReadyCheckStartedEvent } from "@/gateway/events/ready-check-started.event";
 
 @Injectable()
 export class RoomService {
@@ -18,12 +19,11 @@ export class RoomService {
     private readonly roomRepository: Repository<Room>,
     private readonly datasource: DataSource,
     private readonly ebus: EventBus,
-    private readonly partyService: PartyService
-
+    private readonly partyService: PartyService,
   ) {}
 
-  public createRoom(balance: GameBalance): Promise<Room> {
-    return this.datasource.transaction(async (em) => {
+  public async createRoom(balance: GameBalance): Promise<Room> {
+    return await this.datasource.transaction(async (em) => {
       let room = new Room(balance.mode);
       room = await em.save(room);
 
@@ -42,46 +42,5 @@ export class RoomService {
     });
   }
 
-  private async startReadyCheck(room: Room) {
-    await this.datasource.transaction(async (em) => {
-      room.players.forEach((plr) => (plr.readyState = ReadyState.PENDING));
-      await em.save(room.players);
-    });
-    setTimeout(() => {
-      this.finishReadyCheck(room.id);
-    }, ACCEPT_GAME_TIMEOUT);
-  }
 
-  private async finishReadyCheck(roomId: string) {
-    const room = await this.roomRepository.findOneOrFail({
-      where: { id: roomId },
-      relations: ["players"],
-    });
-
-    const accepted = room.players.filter(
-      (t) => t.readyState === ReadyState.READY,
-    );
-    const notAccepted = room.players.filter(
-      (t) => t.readyState !== ReadyState.READY,
-    );
-
-    if (notAccepted.length > 0) {
-      // Report bad piggies
-      for (const plr of notAccepted) {
-        this.ebus.publish(
-          new PlayerDeclinedGameEvent(
-            new PlayerId(plr.steamId),
-            room.lobbyType,
-          ),
-        );
-      }
-
-      // Return good piggies to their queues
-      const goodPartyIds = new Set<string>();
-      accepted.forEach((plr) => goodPartyIds.add(plr.partyId));
-      await this.partyService.returnToQueues(Array.from(goodPartyIds))
-
-
-    }
-  }
 }
