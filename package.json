@@ -34,6 +34,8 @@
     "@nestjs/schedule": "^4.1.2",
     "@nestjs/typeorm": "^10.0.2",
     "@testcontainers/postgresql": "^10.16.0",
+    "@testcontainers/redis": "^10.16.0",
+    "ioredis": "^5.4.2",
     "js-yaml": "^4.1.0",
     "keyv": "^5.2.3",
     "pg": "^8.13.1",
@@ -79,6 +81,9 @@
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
+    ],
+    "setupFilesAfterEnv": [
+      "../jest-ext.ts"
     ],
     "moduleNameMapper": {
       "@/(.*)": "<rootDir>/$1"

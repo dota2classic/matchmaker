@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
-import { AppController } from "./app.controller";
-import { AppService } from "./app.service";
+import { PublishService } from "./publish.service";
 import { MatchmakerModule } from "./matchmaker/matchmaker.module";
 import configuration from "./config/configuration";
 import { ConfigModule, ConfigService } from "@nestjs/config";
@@ -8,6 +7,7 @@ import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm";
 import Entities from "@/matchmaker/entity";
 import { CqrsModule } from "@nestjs/cqrs";
 import { ScheduleModule } from "@nestjs/schedule";
+import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
 
 @Module({
   imports: [
@@ -36,8 +36,24 @@ import { ScheduleModule } from "@nestjs/schedule";
     }),
     MatchmakerModule,
     ScheduleModule.forRoot(),
+    ClientsModule.registerAsync([
+      {
+        name: "RedisQueue",
+        useFactory(config: ConfigService): RedisOptions {
+          return {
+            transport: Transport.REDIS,
+            options: {
+              host: config.get("redis.host"),
+              password: config.get("redis.password"),
+            },
+          };
+        },
+        inject: [ConfigService],
+        imports: [],
+      },
+    ]),
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [PublishService],
 })
 export class AppModule {}

@@ -20,10 +20,10 @@ export class Party {
   players: Relation<PlayerInParty>[];
 
   @Column({ default: 0 })
-  score: number;
+  score: number = 0;
 
   @Column({ name: "waiting_score", default: 0 })
-  waitingScore: number;
+  waitingScore: number = 0;
 
   @Column({
     type: "enum",

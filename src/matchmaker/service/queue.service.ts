@@ -21,6 +21,12 @@ export class QueueService {
       findGames: (entries) =>
         this.findBalancedGame(MatchmakingMode.UNRANKED, entries, 5, 5000),
     },
+    {
+      mode: MatchmakingMode.SOLOMID,
+      priority: 10,
+      findGames: (entries) =>
+        this.findSolomidGame(MatchmakingMode.SOLOMID, entries),
+    },
   ];
 
   constructor(
@@ -29,7 +35,7 @@ export class QueueService {
     private readonly ebus: EventBus,
   ) {}
 
-  @Cron(CronExpression.EVERY_10_SECONDS)
+  @Cron(CronExpression.EVERY_SECOND)
   public async cycle() {
     try {
       await this.queue.setLocked(true);
@@ -45,7 +51,6 @@ export class QueueService {
   }
 
   private async submitFoundGames(balances: GameBalance[]) {
-    console.log(balances)
     for (const balance of balances) {
       try {
         const room = await this.roomService.createRoom(balance);
@@ -65,13 +70,9 @@ export class QueueService {
 
     for (const balanceConfig of tasks) {
       const balances = await this.findAllGames(
-        totalPool.filter((t) =>
-          t.queueModes.includes(balanceConfig.mode),
-        ),
+        totalPool.filter((t) => t.queueModes.includes(balanceConfig.mode)),
         balanceConfig,
       );
-
-
 
       foundGames.push(...balances);
       const partiesToRemove = balances.flatMap((t) =>
@@ -94,6 +95,7 @@ export class QueueService {
     while ((r = await bc.findGames(pool)) !== undefined) {
       const toRemove = r.left.concat(r.right).flatMap((a) => a.id);
       pool = pool.filter((entry) => !toRemove.includes(entry.id));
+      foundGames.push(r);
     }
 
     return foundGames;
@@ -104,7 +106,7 @@ export class QueueService {
     pool: Party[],
     teamSize: number = 5,
     timeLimit: number = 5000,
-  ) {
+  ): Promise<GameBalance | undefined> {
     // Let's first filter off this case
     const totalPlayersInQ = pool.length;
     if (totalPlayersInQ < teamSize * 2) {
@@ -154,4 +156,28 @@ export class QueueService {
 
     return comp1 + avgDiff;
   };
+
+  /**
+   * Party of 2 players are automatically placed against each other
+   */
+  private async findSolomidGame(
+    mode: MatchmakingMode,
+    pool: Party[],
+  ): Promise<GameBalance | undefined> {
+    if (pool.flatMap((it) => it.players).length < 2) return;
+    // If we have a pair party, match them
+    const bestMatch = findBestMatchBy(
+      pool,
+      1,
+      this.balanceFunction,
+      2000, // Max 5 seconds to find a game
+    );
+
+    if (bestMatch === undefined) {
+      this.logger.warn("Can't find game: should not be possible");
+      return undefined;
+    }
+
+    return new GameBalance(mode, bestMatch.left, bestMatch.right);
+  }
 }

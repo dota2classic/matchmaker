@@ -10,9 +10,11 @@ import { RoomService } from "@/matchmaker/service/room.service";
 import { QueueService } from "@/matchmaker/service/queue.service";
 import { RoomCreatedHandler } from "@/matchmaker/event-handler/room-created.handler";
 import { ReadyCheckService } from "@/matchmaker/service/ready-check.service";
+import { MatchmakerController } from "@/matchmaker/matchmaker.controller";
 
 const EventHandlers = [PlayerEnterQueueRequestedHandler, RoomCreatedHandler];
 @Module({
+  controllers: [MatchmakerController],
   imports: [TypeOrmModule.forFeature(Entities), CqrsModule],
   providers: [
     PartyService,
