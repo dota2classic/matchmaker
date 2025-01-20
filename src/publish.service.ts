@@ -4,6 +4,7 @@ import { EventBus, ofType, QueryBus } from "@nestjs/cqrs";
 import { PartyInviteCreatedEvent } from "@/gateway/events/party/party-invite-created.event";
 import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 import { PartyInviteExpiredEvent } from "@/gateway/events/party/party-invite-expired.event";
+import { QueueUpdatedEvent } from "@/gateway/events/queue-updated.event";
 
 @Injectable()
 export class PublishService implements OnApplicationBootstrap {
@@ -38,6 +39,7 @@ export class PublishService implements OnApplicationBootstrap {
       PartyInviteExpiredEvent,
       PartyInviteCreatedEvent,
       PartyUpdatedEvent,
+      QueueUpdatedEvent,
       // PartyInviteResultEvent,
       //
       // MatchmakingBannedEvent,

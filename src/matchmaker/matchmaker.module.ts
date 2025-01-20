@@ -15,8 +15,15 @@ import { GetPartyHandler } from "@/matchmaker/query/get-party-query.handler";
 import { GetUserRoomHandler } from "@/matchmaker/query/get-user-room-query.handler";
 import { GetPartyInvitationsHandler } from "@/matchmaker/query/get-party-invitations-query.handler";
 import { GetQueueStateHandler } from "@/matchmaker/query/get-queue-state-query.handler";
+import { PlayerLeaveQueueRequestedHandler } from "@/matchmaker/event-handler/player-leave-queue-requested.handler";
+import { PartyInviteRequestedHandler } from "@/matchmaker/event-handler/party-invite-requested.handler";
 
-const EventHandlers = [PlayerEnterQueueRequestedHandler, RoomCreatedHandler];
+const EventHandlers = [
+  PlayerEnterQueueRequestedHandler,
+  RoomCreatedHandler,
+  PlayerLeaveQueueRequestedHandler,
+  PartyInviteRequestedHandler,
+];
 const QueryHandlers = [
   GetPartyHandler,
   GetUserRoomHandler,
