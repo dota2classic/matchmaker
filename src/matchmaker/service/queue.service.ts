@@ -35,18 +35,28 @@ export class QueueService {
     private readonly ebus: EventBus,
   ) {}
 
-  @Cron(CronExpression.EVERY_SECOND)
+  @Cron(CronExpression.EVERY_5_SECONDS)
   public async cycle() {
+    if (await this.queue.isLocked()) {
+      this.logger.log("Queue is locked, skipping cycle")
+      return;
+    }
+    let balances: GameBalance[] = [];
+    let error: Error | undefined;
     try {
       await this.queue.setLocked(true);
       const entries = await this.queue.entries();
-      const balances = await this.iterateModes(entries);
-
+      balances = await this.iterateModes(entries);
       await this.submitFoundGames(balances);
     } catch (e) {
-      this.logger.error("Error while matchmaking", e);
+      error = e;
     } finally {
       await this.queue.setLocked(false);
+    }
+
+    if (error) {
+      this.logger.error("Error while matchmaking", error);
+      return;
     }
   }
 
@@ -54,7 +64,7 @@ export class QueueService {
     for (const balance of balances) {
       try {
         const room = await this.roomService.createRoom(balance);
-        await this.queue.leaveQueue(balance.left.concat(balance.right));
+        await this.queue.leaveQueue(balance.left.concat(balance.right), true);
         // Ok we're good
         this.ebus.publish(new RoomCreatedEvent(room.id, balance));
       } catch (e) {
@@ -69,8 +79,10 @@ export class QueueService {
     const foundGames: GameBalance[] = [];
 
     for (const balanceConfig of tasks) {
+      const taskPool = totalPool.filter((t) => t.queueModes.includes(balanceConfig.mode));
+      console.log(`Pool length for ${balanceConfig.mode} is ${taskPool.length}`)
       const balances = await this.findAllGames(
-        totalPool.filter((t) => t.queueModes.includes(balanceConfig.mode)),
+        taskPool,
         balanceConfig,
       );
 

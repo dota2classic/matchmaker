@@ -1,7 +1,6 @@
 import SpyInstance = jest.SpyInstance;
-
 export {};
-
+import 'jest-extended';
 expect.extend({
   toReceiveCall(received: SpyInstance, expected) {
     const args = Array.isArray(expected) ? expected : [expected];
@@ -20,7 +19,9 @@ expect.extend({
     return {
       message: () =>
         `Expected: ${this.utils.printExpected(expected)}\nReceived: ${this.utils.printReceived(
-          received.mock.calls.map((it, idx) => `${idx + 1}: ${JSON.stringify(it)}`).join("\n"),
+          received.mock.calls
+            .map((it, idx) => `${idx + 1}: ${JSON.stringify(it)}`)
+            .join("\n"),
         )}\n\n`,
       pass: false,
     };

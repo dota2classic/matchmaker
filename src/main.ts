@@ -3,6 +3,10 @@ import { AppModule } from "./app.module";
 import { Transport } from "@nestjs/microservices";
 import configuration from "@/config/configuration";
 import { ConfigService } from "@nestjs/config";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { QueueMeta } from "@/matchmaker/entity/queue-meta";
+import { Repository } from "typeorm";
+import { Dota2Version } from "@/gateway/shared-types/dota2version";
 
 async function bootstrap() {
   const config = new ConfigService(configuration());
@@ -16,6 +20,15 @@ async function bootstrap() {
       host: config.get("redis.host"),
     },
   });
+
+  const repo: Repository<QueueMeta> = app.get(getRepositoryToken(QueueMeta));
+  await repo.upsert(
+    {
+      isLocked: false,
+      version: Dota2Version.Dota_684,
+    },
+    ["version"],
+  );
 
   await app.listen();
 }

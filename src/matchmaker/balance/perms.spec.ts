@@ -9,7 +9,7 @@ describe("permutations", () => {
     const p = new Party();
     p.id = v4();
     p.players = users.map(
-      (usr, idx) => new PlayerInParty(usr, p.id, 123, idx === 0),
+      (usr, idx) => new PlayerInParty(usr, p.id, idx === 0),
     );
 
     return p;

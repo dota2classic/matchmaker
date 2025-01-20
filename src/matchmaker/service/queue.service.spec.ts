@@ -31,8 +31,6 @@ describe("QueueService", () => {
     // when
     await qs.cycle();
 
-    console.log(te.ebusSpy.mock.calls);
-
     // then
     expect(te.ebusSpy).toReceiveCall(
       expect.objectContaining({

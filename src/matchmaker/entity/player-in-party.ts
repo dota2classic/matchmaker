@@ -11,7 +11,7 @@ import { Party } from "@/matchmaker/entity/party";
 @Index("only_one_leader", ["partyId"], { unique: true, where: "leader" })
 @Entity()
 export class PlayerInParty {
-  @PrimaryColumn({ name: "steam_id" })
+  @PrimaryColumn({ name: "steam_id", unique: true  })
   steamId: string;
 
   @ManyToOne(() => Party, (t) => t.players, { eager: false })
@@ -27,18 +27,13 @@ export class PlayerInParty {
   @Column({ name: "leader", default: false })
   isLeader: boolean;
 
-  @Column({ type: "float" })
-  score: number;
-
   constructor(
     steamId: string,
     partyId: string,
-    score: number,
     isLeader: boolean,
   ) {
     this.steamId = steamId;
     this.partyId = partyId;
-    this.score = score;
     this.isLeader = isLeader;
   }
 }

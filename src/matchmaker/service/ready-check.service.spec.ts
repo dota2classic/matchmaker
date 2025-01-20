@@ -1,6 +1,7 @@
 import {
   createParty,
   createRoom,
+  sleep,
   testUser,
   useFullModule,
 } from "@/test/useFullModule";
@@ -122,6 +123,34 @@ describe("ReadyCheckService", () => {
           ],
           Dota2Version.Dota_684,
         ),
+      );
+    });
+
+    it("should expire ready checks via cron job", async () => {
+      // given
+      const p1 = await createParty(
+        te,
+        [MatchmakingMode.BOTS_2X2],
+        [testUser()],
+      );
+      const p2 = await createParty(
+        te,
+        [MatchmakingMode.BOTS_2X2],
+        [testUser()],
+      );
+      const room = await createRoom(te, MatchmakingMode.BOTS_2X2, [p1], [p2]);
+      await rs.startReadyCheck(room);
+      // when
+      await sleep(2000);
+      await rs.expireReadyChecks("1s");
+
+      // then
+      // in this case, both players didn't accept, so
+      expect(te.ebusSpy).toReceiveCall(
+        new PlayerDeclinedGameEvent(p1.leader, MatchmakingMode.BOTS_2X2),
+      );
+      expect(te.ebusSpy).toReceiveCall(
+        new PlayerDeclinedGameEvent(p2.leader, MatchmakingMode.BOTS_2X2),
       );
     });
   });

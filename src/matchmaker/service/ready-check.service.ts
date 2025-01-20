@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import { Room } from "@/matchmaker/entity/room";
 import { ReadyState } from "@/gateway/events/ready-state-received.event";
 import { ReadyCheckStartedEvent } from "@/gateway/events/ready-check-started.event";
-import { ACCEPT_GAME_TIMEOUT } from "@/gateway/shared-types/timings";
 import { PlayerDeclinedGameEvent } from "@/gateway/events/mm/player-declined-game.event";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
@@ -12,6 +11,7 @@ import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { MatchPlayer, RoomReadyEvent } from "@/gateway/events/room-ready.event";
 import { PlayerId } from "@/gateway/shared-types/player-id";
 import { Dota2Version } from "@/gateway/shared-types/dota2version";
+import { Cron, CronExpression } from "@nestjs/schedule";
 
 @Injectable()
 export class ReadyCheckService {
@@ -42,11 +42,22 @@ export class ReadyCheckService {
       ),
     );
 
-    setTimeout(() => {
-      this.finishReadyCheck(room.id);
-    }, ACCEPT_GAME_TIMEOUT);
-
     return room;
+  }
+
+  @Cron(CronExpression.EVERY_SECOND)
+  public async expireReadyChecks(readyCheckDuration: string = "1m") {
+    const expiredRooms = await this.roomRepository
+      .createQueryBuilder("r")
+      .where(
+        "r.ready_check_started_at + :ready_check_duration::interval < now()",
+        { ready_check_duration: readyCheckDuration },
+      )
+      .getMany();
+
+    await Promise.all(
+      expiredRooms.map((room) => this.finishReadyCheck(room.id)),
+    );
   }
 
   public async finishReadyCheck(roomId: string) {

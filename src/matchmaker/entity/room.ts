@@ -25,7 +25,7 @@ export class Room {
   @Column({
     type: "timestamptz",
     name: "ready_check_started_at",
-    default: "now()",
+    default: () => "now()",
   })
   readyCheckStartedAt: Date;
 

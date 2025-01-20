@@ -21,13 +21,12 @@ export class PublishService implements OnApplicationBootstrap{
     } catch (e) {}
 
 
-    setInterval(async () => {
-      const some = await this.redisEventQueue.emit(
-        PlayerEnterQueueRequestedEvent.name,
-        new PlayerEnterQueueRequestedEvent("123", [MatchmakingMode.BOTS_2X2])
-      ).toPromise();
-      console.log("Emitted", some)
-    }, 500)
+    // setInterval(async () => {
+    //   const some = await this.redisEventQueue.emit(
+    //     PlayerEnterQueueRequestedEvent.name,
+    //     new PlayerEnterQueueRequestedEvent("123", [MatchmakingMode.BOTS_2X2])
+    //   ).toPromise();
+    // }, 500)
 
     // events to publish to global
     const publicEvents: Type<any>[] = [

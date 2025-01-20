@@ -38,7 +38,7 @@ describe("AppController (e2e)", () => {
 
     // wait for cycle
 
-    await sleep(2000);
+    await sleep(10_000);
 
 
     expect(te.ebusSpy).toReceiveCall(

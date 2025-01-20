@@ -7,6 +7,8 @@ import {
 } from "typeorm";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
+import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
+import { PartyInvite } from "@/matchmaker/entity/party-invite";
 
 @Entity("party")
 export class Party {
@@ -18,6 +20,12 @@ export class Party {
     onDelete: "CASCADE",
   })
   players: Relation<PlayerInParty>[];
+
+  @OneToMany(() => PartyInvite, (t) => t.party, {
+    eager: false,
+    onDelete: "CASCADE",
+  })
+  invites: Relation<PartyInvite>[];
 
   @Column({ default: 0 })
   score: number = 0;
@@ -43,5 +51,15 @@ export class Party {
 
   get leader(): string {
     return this.players.find((t) => t.isLeader)!.steamId;
+  }
+
+  public snapshotEvent(): PartyUpdatedEvent {
+    return new PartyUpdatedEvent(
+      this.id,
+      this.leader,
+      this.players.map((plr) => plr.steamId),
+      this.queueModes,
+      this.inQueue,
+    );
   }
 }

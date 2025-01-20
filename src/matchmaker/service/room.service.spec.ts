@@ -39,7 +39,7 @@ describe("RoomService", () => {
             roomId: room.id,
             steamId: party.players[0].steamId,
             readyState: ReadyState.PENDING,
-            team: expect.any(Number)
+            team: expect.any(Number),
           })),
         } satisfies DeepPartial<Room>),
       );
@@ -50,13 +50,17 @@ describe("RoomService", () => {
       const parties: Party[] = await Promise.all(
         Array.from({ length: 10 }, () => {
           const pid = v4();
-          return {
-            id: pid,
-            players: [{ steamId: testUser(), partyId: pid, score: 0 }],
-            score: 0,
-            waitingScore: 0,
-            queueModes: [MatchmakingMode.UNRANKED],
-          } as Party;
+          const p = new Party();
+          p.id = pid;
+          p.players = [
+            { steamId: testUser(), partyId: pid, isLeader: true, party: p },
+          ];
+          p.score = 0;
+          p.waitingScore = 0;
+          p.queueModes = [MatchmakingMode.UNRANKED];
+          p.inQueue = false;
+
+          return p;
         }),
       );
       const rs = te.module.get(RoomService);

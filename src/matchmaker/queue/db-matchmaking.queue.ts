@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Any, DataSource, In, Repository } from "typeorm";
@@ -8,7 +8,6 @@ import { EventBus } from "@nestjs/cqrs";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { QueueUpdatedEvent } from "@/gateway/events/queue-updated.event";
-import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 
 /**
  * Contracts:
@@ -17,6 +16,7 @@ import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
  */
 @Injectable()
 export class DbMatchmakingQueue {
+  private logger = new Logger(DbMatchmakingQueue.name);
   constructor(
     @InjectRepository(Party)
     private readonly partyRepository: Repository<Party>,
@@ -51,7 +51,13 @@ export class DbMatchmakingQueue {
   }
 
   async entries(): Promise<Party[]> {
-    return this.partyRepository.find({ where: { inQueue: true } });
+    return this.partyRepository
+      .createQueryBuilder("p")
+      .leftJoinAndSelect("p.players", "players")
+      .where({ inQueue: true })
+      .having("count(players) > 0")
+      .groupBy("p.id, players.steam_id")
+      .getMany();
   }
 
   // Queue is locked by default until is locked manually
@@ -61,8 +67,8 @@ export class DbMatchmakingQueue {
     });
   }
 
-  async leaveQueue(_entries: Party[]): Promise<void> {
-    if (await this.isLocked()) return;
+  async leaveQueue(_entries: Party[], bypassLock: boolean = false): Promise<void> {
+    if (!bypassLock && await this.isLocked()) return;
 
     let entries = _entries.filter((entry) => entry.inQueue);
     entries.forEach((entry) => (entry.inQueue = false));
@@ -88,6 +94,7 @@ export class DbMatchmakingQueue {
   }
 
   async setLocked(locked: boolean): Promise<void> {
+    this.logger.log(`Set table lock to`, { locked });
     await this.queueMetaRepository.upsert(
       {
         version: Dota2Version.Dota_684,
@@ -126,16 +133,7 @@ export class DbMatchmakingQueue {
   private async partyUpdated(party: Party | Party[]) {
     const parties = Array.isArray(party) ? party : [party];
     parties
-      .map(
-        (party) =>
-          new PartyUpdatedEvent(
-            party.id,
-            party.players.find((t) => t.isLeader)!.steamId,
-            party.players.map((plr) => plr.steamId),
-            party.queueModes,
-            party.inQueue,
-          ),
-      )
+      .map((party) => party.snapshotEvent())
       .map((evt) => this.ebus.publish(evt));
   }
 }
