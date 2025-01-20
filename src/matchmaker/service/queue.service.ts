@@ -45,11 +45,11 @@ export class QueueService {
     let error: Error | undefined;
     try {
       await this.queue.setLocked(true);
-      this.logger.log("Locked queue for processing")
+      this.logger.log("Locked queue for processing");
       const entries = await this.queue.entries();
-      this.logger.log(`Acquire entries ${entries.length}`, entries)
+      this.logger.log(`Acquire entries ${entries.length}`);
       balances = await this.iterateModes(entries);
-      this.logger.log(`Found balances ${balances.length}`)
+      this.logger.log(`Found balances ${balances.length}`);
       await this.submitFoundGames(balances);
     } catch (e) {
       error = e;

@@ -18,6 +18,15 @@ export class RoomService {
     private readonly partyService: PartyService,
   ) {}
 
+  public async findRoomOf(steamId: string): Promise<Room | null> {
+    return this.roomRepository
+      .createQueryBuilder("r")
+      .leftJoinAndSelect("r.players", "players")
+      .leftJoin("r.players", "filterplayers")
+      .where("filterplayers.steam_id = :steamId", { steamId: steamId })
+      .getOne();
+  }
+
   public async createRoom(balance: GameBalance): Promise<Room> {
     return await this.datasource.transaction(async (em) => {
       let room = new Room(balance.mode);

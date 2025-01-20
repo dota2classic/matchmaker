@@ -7,8 +7,6 @@ import { PlayerService } from "@/matchmaker/service/player.service";
 import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
 import { PartyInvite } from "@/matchmaker/entity/party-invite";
 import { EventBus } from "@nestjs/cqrs";
-import { PartyInviteCreatedEvent } from "@/gateway/events/party/party-invite-created.event";
-import { PlayerId } from "@/gateway/shared-types/player-id";
 import { PartyInviteExpiredEvent } from "@/gateway/events/party/party-invite-expired.event";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
@@ -101,14 +99,7 @@ export class PartyService {
       const invite = await this.partyInviteRepository.save(
         new PartyInvite(p.id, inviter, invited),
       );
-      this.ebus.publish(
-        new PartyInviteCreatedEvent(
-          invite.id,
-          invite.partyId,
-          new PlayerId(inviter),
-          new PlayerId(invited),
-        ),
-      );
+      this.ebus.publish(invite.toEvent());
     } catch (e) {
       // Duplicate index, do nothing
     }
@@ -129,7 +120,7 @@ export class PartyService {
 
     if (!invite) return;
 
-    await this.partyInviteRepository.delete(invite);
+    await this.partyInviteRepository.remove(invite);
     this.ebus.publish(new PartyInviteExpiredEvent(invite.id, invite.invited));
   }
 

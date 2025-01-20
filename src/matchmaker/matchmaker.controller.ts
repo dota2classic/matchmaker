@@ -5,6 +5,10 @@ import { construct } from "@/gateway/util/construct";
 import { EventBus, QueryBus } from "@nestjs/cqrs";
 import { GetPartyQueryResult } from "@/gateway/queries/GetParty/get-party-query.result";
 import { GetPartyQuery } from "@/gateway/queries/GetParty/get-party.query";
+import { GetUserRoomQueryResult } from "@/gateway/queries/GetUserRoom/get-user-room-query.result";
+import { GetUserRoomQuery } from "@/gateway/queries/GetUserRoom/get-user-room.query";
+import { GetPartyInvitationsQueryResult } from "@/gateway/queries/GetPartyInvitations/get-party-invitations-query.result";
+import { GetPartyInvitationsQuery } from "@/gateway/queries/GetPartyInvitations/get-party-invitations.query";
 
 @Controller()
 export class MatchmakerController {
@@ -23,5 +27,19 @@ export class MatchmakerController {
   @MessagePattern(GetPartyQuery.name)
   async GetPartyQuery(query: GetPartyQuery): Promise<GetPartyQueryResult> {
     return this.qbus.execute(construct(GetPartyQuery, query));
+  }
+
+  @MessagePattern(GetUserRoomQuery.name)
+  async GetUserRoomQuery(
+    query: GetUserRoomQuery,
+  ): Promise<GetUserRoomQueryResult> {
+    return this.qbus.execute(construct(GetUserRoomQuery, query));
+  }
+
+  @MessagePattern(GetPartyInvitationsQuery.name)
+  async GetPartyInvitationsQuery(
+    query: GetPartyInvitationsQuery,
+  ): Promise<GetPartyInvitationsQueryResult> {
+    return this.qbus.execute(construct(GetPartyInvitationsQuery, query));
   }
 }

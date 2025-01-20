@@ -11,8 +11,17 @@ import { QueueService } from "@/matchmaker/service/queue.service";
 import { RoomCreatedHandler } from "@/matchmaker/event-handler/room-created.handler";
 import { ReadyCheckService } from "@/matchmaker/service/ready-check.service";
 import { MatchmakerController } from "@/matchmaker/matchmaker.controller";
+import { GetPartyHandler } from "@/matchmaker/query/get-party-query.handler";
+import { GetUserRoomHandler } from "@/matchmaker/query/get-user-room-query.handler";
+import { GetPartyInvitationsHandler } from "@/matchmaker/query/get-party-invitations-query.handler";
 
 const EventHandlers = [PlayerEnterQueueRequestedHandler, RoomCreatedHandler];
+const QueryHandlers = [
+  GetPartyHandler,
+  GetUserRoomHandler,
+  GetPartyInvitationsHandler,
+];
+
 @Module({
   controllers: [MatchmakerController],
   imports: [TypeOrmModule.forFeature(Entities), CqrsModule],
@@ -25,6 +34,7 @@ const EventHandlers = [PlayerEnterQueueRequestedHandler, RoomCreatedHandler];
 
     DbMatchmakingQueue,
     ...EventHandlers,
+    ...QuerHandlers,
   ],
 })
 export class MatchmakerModule {}
