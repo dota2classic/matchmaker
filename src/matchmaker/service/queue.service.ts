@@ -38,15 +38,18 @@ export class QueueService {
   @Cron(CronExpression.EVERY_5_SECONDS)
   public async cycle() {
     if (await this.queue.isLocked()) {
-      this.logger.log("Queue is locked, skipping cycle")
+      this.logger.log("Queue is locked, skipping cycle");
       return;
     }
     let balances: GameBalance[] = [];
     let error: Error | undefined;
     try {
       await this.queue.setLocked(true);
+      this.logger.log("Locked queue for processing")
       const entries = await this.queue.entries();
+      this.logger.log(`Acquire entries ${entries.length}`, entries)
       balances = await this.iterateModes(entries);
+      this.logger.log(`Found balances ${balances.length}`)
       await this.submitFoundGames(balances);
     } catch (e) {
       error = e;
@@ -79,12 +82,14 @@ export class QueueService {
     const foundGames: GameBalance[] = [];
 
     for (const balanceConfig of tasks) {
-      const taskPool = totalPool.filter((t) => t.queueModes.includes(balanceConfig.mode));
-      console.log(`Pool length for ${balanceConfig.mode} is ${taskPool.length}`)
-      const balances = await this.findAllGames(
-        taskPool,
-        balanceConfig,
+      const taskPool = totalPool.filter((t) =>
+        t.queueModes.includes(balanceConfig.mode),
       );
+      this.logger.log(`Player to balance for mode`, {
+        lobby_type: balanceConfig.mode,
+        party_count: taskPool.length,
+      });
+      const balances = await this.findAllGames(taskPool, balanceConfig);
 
       foundGames.push(...balances);
       const partiesToRemove = balances.flatMap((t) =>

@@ -6,7 +6,7 @@ import {
 import { getRepositoryToken, TypeOrmModule } from "@nestjs/typeorm";
 import Entities from "@/matchmaker/entity";
 import { MatchmakerModule } from "@/matchmaker/matchmaker.module";
-import { Repository } from "typeorm";
+import { ObjectLiteral, Repository } from "typeorm";
 import { Party } from "@/matchmaker/entity/party";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
@@ -15,27 +15,39 @@ import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 import { QueueMeta } from "@/matchmaker/entity/queue-meta";
 import { Dota2Version } from "@/gateway/shared-types/dota2version";
-import { EventBus } from "@nestjs/cqrs";
+import { Constructor, EventBus } from "@nestjs/cqrs";
 import { DotaTeam } from "@/gateway/shared-types/dota-team";
+import { INestMicroservice } from "@nestjs/common";
+import { RedisContainer, StartedRedisContainer } from "@testcontainers/redis";
+import { Transport } from "@nestjs/microservices";
+import { ScheduleModule } from "@nestjs/schedule";
+import { EntityClassOrSchema } from "@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type";
 import SpyInstance = jest.SpyInstance;
 
 export interface TestEnvironment {
   module: TestingModule;
+  app: INestMicroservice;
   containers: {
     pg: StartedPostgreSqlContainer;
+    redis: StartedRedisContainer;
   };
   ebus: EventBus;
   ebusSpy: SpyInstance;
+  service<R>(c: Constructor<R>): R;
+  repo<R extends ObjectLiteral>(c: EntityClassOrSchema): Repository<R>;
 }
 
-export function useFullModule(): TestEnvironment {
-  jest.setTimeout(60_000);
+export function useFullModule(schedule: boolean = true): TestEnvironment {
+  jest.setTimeout(120_000);
 
   const te: TestEnvironment = {
     module: undefined as unknown as any,
     containers: {} as unknown as any,
     ebus: {} as unknown as any,
     ebusSpy: {} as unknown as any,
+    app: {} as unknown as any,
+    service: {} as unknown as any,
+    repo: {} as unknown as any,
   };
 
   afterEach(() => {
@@ -46,6 +58,10 @@ export function useFullModule(): TestEnvironment {
     te.containers.pg = await new PostgreSqlContainer()
       .withUsername("username")
       .withPassword("password")
+      .start();
+
+    te.containers.redis = await new RedisContainer()
+      .withPassword("redispass")
       .start();
 
     te.module = await Test.createTestingModule({
@@ -67,15 +83,33 @@ export function useFullModule(): TestEnvironment {
         }),
         TypeOrmModule.forFeature(Entities),
         MatchmakerModule,
+        ...(schedule ? [ScheduleModule.forRoot()] : []),
       ],
     }).compile();
 
+    te.app = await te.module.createNestMicroservice({
+      transport: Transport.REDIS,
+      options: {
+        retryAttempts: 3,
+        retryDelay: 3000,
+        password: te.containers.redis.getPassword(),
+        host: te.containers.redis.getHost(),
+        port: te.containers.redis.getPort(),
+      },
+    });
+
+    await te.app.listen();
+
+    te.service = (con) => te.module.get(con);
+    te.repo = (con) => te.module.get(getRepositoryToken(con));
     te.ebus = te.module.get(EventBus);
     te.ebusSpy = jest.spyOn(te.ebus, "publish");
   });
 
   afterAll(async () => {
+    await te.app.close();
     await te.containers.pg.stop();
+    await te.containers.redis.stop();
   });
 
   return te;
@@ -95,11 +129,9 @@ export async function createParty(
   p.inQueue = inQueue;
   p = await pr.save(p);
 
-  const pip: Repository<Party> = te.module.get(
-    getRepositoryToken(PlayerInParty),
-  );
+  const pip = te.repo(PlayerInParty);
   p.players = await pip.save(
-    players.map((plr) => new PlayerInParty(plr, p.id, 0, plr === leader)),
+    players.map((plr) => new PlayerInParty(plr, p.id, plr === leader)),
   );
 
   return p;
@@ -177,4 +209,8 @@ export async function setQueueLocked(te: TestEnvironment, locked: boolean) {
 }
 export function testUser(): string {
   return Math.round(Math.random() * 1000000).toString();
+}
+
+export async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

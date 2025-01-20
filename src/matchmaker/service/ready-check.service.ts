@@ -12,12 +12,15 @@ import { MatchPlayer, RoomReadyEvent } from "@/gateway/events/room-ready.event";
 import { PlayerId } from "@/gateway/shared-types/player-id";
 import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { Cron, CronExpression } from "@nestjs/schedule";
+import { ReadyStateUpdatedEvent } from "@/gateway/events/ready-state-updated.event";
 
 @Injectable()
 export class ReadyCheckService {
   constructor(
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
+    @InjectRepository(PlayerInRoom)
+    private readonly playerInRoomRepository: Repository<PlayerInRoom>,
     private readonly datasource: DataSource,
     private readonly ebus: EventBus,
     private readonly partyService: PartyService,
@@ -60,6 +63,32 @@ export class ReadyCheckService {
     );
   }
 
+  public async submitReadyCheck(
+    roomId: string,
+    steamId: string,
+    state: ReadyState,
+  ) {
+    const room = await this.roomRepository.findOneOrFail({
+      where: { id: roomId },
+      relations: ["players"],
+    });
+
+    if (room.readyCheckFinishedAt) {
+      // It's already finished
+      return;
+    }
+
+    const plr = room.players.find((plr) => plr.steamId === steamId);
+    if (!plr) return;
+
+    plr.readyState = state;
+    await this.playerInRoomRepository.save(plr);
+
+    if (!(await this.checkIsRoomReady(room))) {
+      await this.readyStateUpdate(room);
+    }
+  }
+
   public async finishReadyCheck(roomId: string) {
     const room = await this.roomRepository.findOneOrFail({
       where: { id: roomId },
@@ -90,6 +119,17 @@ export class ReadyCheckService {
     }
   }
 
+  private async checkIsRoomReady(room: Room): Promise<boolean> {
+    const readyPlayers = room.players.filter(
+      (t) => t.readyState === ReadyState.READY,
+    );
+    if (readyPlayers.length === room.players.length) {
+      await this.finishReadyCheck(room.id);
+      return true;
+    }
+    return false;
+  }
+
   private async onFailedRoom(
     room: Room,
     accepted: PlayerInRoom[],
@@ -106,6 +146,20 @@ export class ReadyCheckService {
     const goodPartyIds = new Set<string>();
     accepted.forEach((plr) => goodPartyIds.add(plr.partyId));
     await this.partyService.returnToQueues(Array.from(goodPartyIds));
+  }
+
+  private async readyStateUpdate(room: Room) {
+    this.ebus.publish(
+      new ReadyStateUpdatedEvent(
+        room.id,
+        room.lobbyType,
+        room.players.map((plr) => ({
+          steamId: plr.steamId,
+          readyState: plr.readyState,
+        })),
+        { accepted: 0, total: 0 },
+      ),
+    );
   }
 
   private async onSucceededRoom(room: Room) {

@@ -45,6 +45,7 @@
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
+    "@base2/pretty-print-object": "^1.0.2",
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
@@ -53,6 +54,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.3.1",
     "@types/supertest": "^6.0.0",
+    "@types/wtfnode": "^0.7.3",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^8.0.0",
@@ -67,7 +69,8 @@
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "wtfnode": "^0.10.0"
   },
   "jest": {
     "moduleFileExtensions": [

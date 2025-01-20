@@ -20,8 +20,9 @@ expect.extend({
       message: () =>
         `Expected: ${this.utils.printExpected(expected)}\nReceived: ${this.utils.printReceived(
           received.mock.calls
-            .map((it, idx) => `${idx + 1}: ${JSON.stringify(it)}`)
-            .join("\n"),
+            .map((it, idx) => `\n${idx + 1}: ${it[0].constructor.name} ${JSON.stringify(it[0])}`)
+            // .map((it, idx) => `\n${idx + 1}: ${it[0]}`)
+            .join(""),
         )}\n\n`,
       pass: false,
     };

@@ -41,7 +41,7 @@ export class DbMatchmakingQueue {
     });
     if (isInRoom) return;
 
-    await this.ds.transaction((em) => {
+    party = await this.ds.transaction((em) => {
       party.inQueue = true;
       party.queueModes = modes;
       return em.save(party);
