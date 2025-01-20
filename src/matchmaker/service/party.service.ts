@@ -130,7 +130,7 @@ export class PartyService {
     if (!invite) return;
 
     await this.partyInviteRepository.delete(invite);
-    this.ebus.publish(new PartyInviteExpiredEvent(inviteId));
+    this.ebus.publish(new PartyInviteExpiredEvent(invite.id, invite.invited));
   }
 
   public async acceptInvite(inviteId: string) {
@@ -208,7 +208,7 @@ export class PartyService {
         .where({ id: invite.id })
         .execute();
 
-      this.ebus.publish(new PartyInviteExpiredEvent(invite.id));
+      this.ebus.publish(new PartyInviteExpiredEvent(invite.id, invite.invited));
     });
   }
 }

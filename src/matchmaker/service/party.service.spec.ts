@@ -158,7 +158,7 @@ describe("PartyService", () => {
       );
       expect(te.ebusSpy).nthCalledWith(
         2,
-        new PartyInviteExpiredEvent(invite.id),
+        new PartyInviteExpiredEvent(invite.id, invite.invited),
       );
 
       await expectInviteDeleted(invite.id);
@@ -187,7 +187,7 @@ describe("PartyService", () => {
 
       expect(te.ebusSpy).nthCalledWith(
         2,
-        new PartyInviteExpiredEvent(invite.id),
+        new PartyInviteExpiredEvent(invite.id, invite.invited),
       );
 
       await expectInviteDeleted(invite.id);
@@ -225,7 +225,7 @@ describe("PartyService", () => {
       // Delete invite
       expect(te.ebusSpy).nthCalledWith(
         3,
-        new PartyInviteExpiredEvent(invite.id),
+        new PartyInviteExpiredEvent(invite.id, invite.invited),
       );
 
       await expectInviteDeleted(invite.id);
@@ -260,7 +260,7 @@ describe("PartyService", () => {
       // then
       expect(te.ebusSpy).nthCalledWith(
         1,
-        new PartyInviteExpiredEvent(invite.id),
+        new PartyInviteExpiredEvent(invite.id, invite.invited),
       );
     });
 
