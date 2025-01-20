@@ -55,7 +55,7 @@ export class MatchmakerController {
 
   @MessagePattern(GetQueueStateQuery.name)
   async GetQueueStateQuery(
-    query: GetQueueStateQuer,
+    query: GetQueueStateQuery,
   ): Promise<GetQueueStateQueryResult> {
     return this.qbus.execute(construct(GetQueueStateQuery, query));
   }
