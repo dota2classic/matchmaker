@@ -14,12 +14,14 @@ import { MatchmakerController } from "@/matchmaker/matchmaker.controller";
 import { GetPartyHandler } from "@/matchmaker/query/get-party-query.handler";
 import { GetUserRoomHandler } from "@/matchmaker/query/get-user-room-query.handler";
 import { GetPartyInvitationsHandler } from "@/matchmaker/query/get-party-invitations-query.handler";
+import { GetQueueStateHandler } from "@/matchmaker/query/get-queue-state-query.handler";
 
 const EventHandlers = [PlayerEnterQueueRequestedHandler, RoomCreatedHandler];
 const QueryHandlers = [
   GetPartyHandler,
   GetUserRoomHandler,
   GetPartyInvitationsHandler,
+  GetQueueStateHandler,
 ];
 
 @Module({

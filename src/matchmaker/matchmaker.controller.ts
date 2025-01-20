@@ -9,6 +9,9 @@ import { GetUserRoomQueryResult } from "@/gateway/queries/GetUserRoom/get-user-r
 import { GetUserRoomQuery } from "@/gateway/queries/GetUserRoom/get-user-room.query";
 import { GetPartyInvitationsQueryResult } from "@/gateway/queries/GetPartyInvitations/get-party-invitations-query.result";
 import { GetPartyInvitationsQuery } from "@/gateway/queries/GetPartyInvitations/get-party-invitations.query";
+import { GetQueueStateQueryResult } from "@/gateway/queries/QueueState/get-queue-state-query.result";
+import { GetQueueStateQuery } from "@/gateway/queries/QueueState/get-queue-state.query";
+import { PlayerLeaveQueueRequestedEvent } from "@/gateway/events/mm/player-leave-queue-requested.event";
 
 @Controller()
 export class MatchmakerController {
@@ -22,6 +25,13 @@ export class MatchmakerController {
     cmd: PlayerEnterQueueRequestedEvent,
   ) {
     await this.ebus.publish(construct(PlayerEnterQueueRequestedEvent, cmd));
+  }
+
+  @EventPattern(PlayerLeaveQueueRequestedEvent.name)
+  public async PlayerLeaveQueueRequestedEvent(
+    cmd: PlayerLeaveQueueRequestedEvent,
+  ) {
+    await this.ebus.publish(construct(PlayerLeaveQueueRequestedEvent, cmd));
   }
 
   @MessagePattern(GetPartyQuery.name)
@@ -41,5 +51,12 @@ export class MatchmakerController {
     query: GetPartyInvitationsQuery,
   ): Promise<GetPartyInvitationsQueryResult> {
     return this.qbus.execute(construct(GetPartyInvitationsQuery, query));
+  }
+
+  @MessagePattern(GetQueueStateQuery.name)
+  async GetQueueStateQuery(
+    query: GetQueueStateQuer,
+  ): Promise<GetQueueStateQueryResult> {
+    return this.qbus.execute(construct(GetQueueStateQuery, query));
   }
 }

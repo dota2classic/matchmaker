@@ -1,25 +1,22 @@
-import { Inject, Injectable, OnApplicationBootstrap, Type } from "@nestjs/common";
+import { Inject, Injectable, OnApplicationBootstrap } from "@nestjs/common";
 import { ClientProxy } from "@nestjs/microservices";
 import { EventBus, ofType, QueryBus } from "@nestjs/cqrs";
-import { PlayerEnterQueueRequestedEvent } from "@/gateway/events/mm/player-enter-queue-requested.event";
-import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
+import { PartyInviteCreatedEvent } from "@/gateway/events/party/party-invite-created.event";
+import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
+import { PartyInviteExpiredEvent } from "@/gateway/events/party/party-invite-expired.event";
 
 @Injectable()
-export class PublishService implements OnApplicationBootstrap{
-
-
+export class PublishService implements OnApplicationBootstrap {
   constructor(
     private readonly ebus: EventBus,
     private readonly qbus: QueryBus,
     @Inject("RedisQueue") private readonly redisEventQueue: ClientProxy,
   ) {}
 
-
   async onApplicationBootstrap() {
     try {
       await this.redisEventQueue.connect();
     } catch (e) {}
-
 
     // setInterval(async () => {
     //   const some = await this.redisEventQueue.emit(
@@ -29,7 +26,7 @@ export class PublishService implements OnApplicationBootstrap{
     // }, 500)
 
     // events to publish to global
-    const publicEvents: Type<any>[] = [
+    const publicEvents: any[] = [
       // QueueCreatedEvent,
       // QueueUpdatedEvent,
       // ReadyStateUpdatedEvent,
@@ -38,9 +35,9 @@ export class PublishService implements OnApplicationBootstrap{
       // RoomReadyEvent,
       // RoomNotReadyEvent,
       //
-      // PartyInviteExpiredEvent,
-      // PartyInviteCreatedEvent,
-      // PartyUpdatedEvent,
+      PartyInviteExpiredEvent,
+      PartyInviteCreatedEvent,
+      PartyUpdatedEvent,
       // PartyInviteResultEvent,
       //
       // MatchmakingBannedEvent,
@@ -55,5 +52,4 @@ export class PublishService implements OnApplicationBootstrap{
       .pipe(ofType(...publicEvents))
       .subscribe((t) => this.redisEventQueue.emit(t.constructor.name, t));
   }
-
 }

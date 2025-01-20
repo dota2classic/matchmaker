@@ -32,7 +32,7 @@ export class DbMatchmakingQueue {
     party: Party,
     modes: MatchmakingMode[] = party.queueModes,
   ): Promise<void> {
-    if (await this.isLocked()) return;
+    // if (await this.isLocked()) return;
     // Contract #1
     const isInRoom = await this.playerInRoomRepository.exists({
       where: {
@@ -68,7 +68,7 @@ export class DbMatchmakingQueue {
   }
 
   async leaveQueue(_entries: Party[], bypassLock: boolean = false): Promise<void> {
-    if (!bypassLock && await this.isLocked()) return;
+    // if (!bypassLock && await this.isLocked()) return;
 
     let entries = _entries.filter((entry) => entry.inQueue);
     entries.forEach((entry) => (entry.inQueue = false));
