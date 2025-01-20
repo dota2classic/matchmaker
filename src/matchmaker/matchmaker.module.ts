@@ -34,7 +34,7 @@ const QueryHandlers = [
 
     DbMatchmakingQueue,
     ...EventHandlers,
-    ...QuerHandlers,
+    ...QueryHandlers,
   ],
 })
 export class MatchmakerModule {}
