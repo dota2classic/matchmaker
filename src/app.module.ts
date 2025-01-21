@@ -8,6 +8,9 @@ import Entities from "@/matchmaker/entity";
 import { CqrsModule } from "@nestjs/cqrs";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
+import { outerQueryNew } from "@/util/outerQuery";
+import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
+import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
 
 @Module({
   imports: [
@@ -54,6 +57,10 @@ import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
     ]),
   ],
   controllers: [],
-  providers: [PublishService],
+  providers: [
+    PublishService,
+    outerQueryNew(GetPlayerInfoQuery, "RedisQueue"),
+    outerQueryNew(GetSessionByUserQuery, "RedisQueue"),
+  ],
 })
 export class AppModule {}

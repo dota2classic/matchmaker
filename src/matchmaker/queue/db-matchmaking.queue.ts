@@ -8,11 +8,11 @@ import { EventBus } from "@nestjs/cqrs";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { QueueUpdatedEvent } from "@/gateway/events/queue-updated.event";
+import { PlayerService } from "@/matchmaker/service/player.service";
 
 /**
  * Contracts:
  * 1) Party can't have modes != [] if in room
- * 2) Can't mutate queue if it is locked
  */
 @Injectable()
 export class DbMatchmakingQueue {
@@ -26,13 +26,19 @@ export class DbMatchmakingQueue {
     private readonly playerInRoomRepository: Repository<PlayerInRoom>,
     private readonly ebus: EventBus,
     private readonly ds: DataSource,
+    private readonly playerService: PlayerService,
   ) {}
 
   async enterQueue(
     party: Party,
     modes: MatchmakingMode[] = party.queueModes,
   ): Promise<void> {
-    // if (await this.isLocked()) return;
+    try {
+      await this.playerService.preparePartyForQueue(party);
+    } catch (e) {
+      this.logger.error("Prevented bad party from entering queue", e);
+    }
+
     // Contract #1
     const isInRoom = await this.playerInRoomRepository.exists({
       where: {
@@ -67,7 +73,10 @@ export class DbMatchmakingQueue {
     });
   }
 
-  async leaveQueue(_entries: Party[], bypassLock: boolean = false): Promise<void> {
+  async leaveQueue(
+    _entries: Party[],
+    bypassLock: boolean = false,
+  ): Promise<void> {
     // if (!bypassLock && await this.isLocked()) return;
 
     let entries = _entries.filter((entry) => entry.inQueue);

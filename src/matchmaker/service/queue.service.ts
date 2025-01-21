@@ -23,7 +23,7 @@ export class QueueService {
     },
     {
       mode: MatchmakingMode.SOLOMID,
-      priority: 10,
+      priority: 100,
       findGames: (entries) =>
         this.findSolomidGame(MatchmakingMode.SOLOMID, entries),
     },
@@ -31,6 +31,12 @@ export class QueueService {
       mode: MatchmakingMode.BOTS,
       priority: 10000,
       findGames: (entries) => this.findBotsGame(MatchmakingMode.BOTS, entries),
+    },
+    {
+      mode: MatchmakingMode.BOTS_2X2,
+      priority: 10,
+      findGames: (entries) =>
+        this.findBalancedGame(MatchmakingMode.BOTS_2X2, entries, 2, 5000),
     },
   ];
 

@@ -51,7 +51,7 @@ export class ReadyCheckService {
   }
 
   @Cron(CronExpression.EVERY_SECOND)
-  public async expireReadyChecks(readyCheckDuration: string = "10s") {
+  public async expireReadyChecks(readyCheckDuration: string = "1m") {
     const expiredRooms = await this.roomRepository
       .createQueryBuilder("r")
       .leftJoinAndSelect("r.players", "players")

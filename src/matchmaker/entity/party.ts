@@ -27,7 +27,7 @@ export class Party {
   })
   invites: Relation<PartyInvite>[];
 
-  @Column({ default: 0 })
+  @Column({ default: 0, type: "float" })
   score: number = 0;
 
   @Column({ name: "waiting_score", default: 0 })

@@ -78,11 +78,11 @@ export class PartyService {
   }
 
   @Cron(CronExpression.EVERY_SECOND)
-  public async expireReadyChecks(readyCheckDuration: string = "1m") {
+  public async expirePartyInvites(partyInviteDuration: string = "1m") {
     const expiredInvites = await this.partyInviteRepository
       .createQueryBuilder("r")
-      .where("r.created_at + :ready_check_duration::interval < now()", {
-        ready_check_duration: readyCheckDuration,
+      .where("r.created_at + :partyInviteDuration::interval < now()", {
+        partyInviteDuration,
       })
       .getMany();
 

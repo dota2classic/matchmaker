@@ -9,6 +9,7 @@ import { ReadyCheckStartedEvent } from "@/gateway/events/ready-check-started.eve
 import { ReadyStateUpdatedEvent } from "@/gateway/events/ready-state-updated.event";
 import { RoomReadyEvent } from "@/gateway/events/room-ready.event";
 import { RoomNotReadyEvent } from "@/gateway/events/room-not-ready.event";
+import { PlayerDeclinedGameEvent } from "@/gateway/events/mm/player-declined-game.event";
 
 @Injectable()
 export class PublishService implements OnApplicationBootstrap {
@@ -49,14 +50,7 @@ export class PublishService implements OnApplicationBootstrap {
 
       RoomReadyEvent,
       RoomNotReadyEvent,
-      // PartyInviteResultEvent,
-      //
-      // MatchmakingBannedEvent,
-      // LogEvent,
-      //
-      // EnterQueueDeclinedEvent,
-      // EnterRankedQueueDeclinedEvent,
-      // PlayerDeclinedGameEvent,
+      PlayerDeclinedGameEvent,
       // PartyQueueStateUpdatedEvent
     ];
     this.ebus
