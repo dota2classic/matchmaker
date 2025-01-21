@@ -20,8 +20,15 @@ import { DotaTeam } from "@/gateway/shared-types/dota-team";
 import { INestMicroservice } from "@nestjs/common";
 import { RedisContainer, StartedRedisContainer } from "@testcontainers/redis";
 import { Transport } from "@nestjs/microservices";
-import { ScheduleModule } from "@nestjs/schedule";
 import { EntityClassOrSchema } from "@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type";
+import { testMockQuery } from "@/test/mocks";
+import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
+import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
+import {
+  BanStatus,
+  GetPlayerInfoQueryResult,
+} from "@/gateway/queries/GetPlayerInfo/get-player-info-query.result";
+import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
 import SpyInstance = jest.SpyInstance;
 
 export interface TestEnvironment {
@@ -35,9 +42,11 @@ export interface TestEnvironment {
   ebusSpy: SpyInstance;
   service<R>(c: Constructor<R>): R;
   repo<R extends ObjectLiteral>(c: EntityClassOrSchema): Repository<R>;
+
+  queryMocks: Record<string, jest.Mock>;
 }
 
-export function useFullModule(schedule: boolean = true): TestEnvironment {
+export function useFullModule(): TestEnvironment {
   jest.setTimeout(120_000);
 
   const te: TestEnvironment = {
@@ -48,6 +57,8 @@ export function useFullModule(schedule: boolean = true): TestEnvironment {
     app: {} as unknown as any,
     service: {} as unknown as any,
     repo: {} as unknown as any,
+
+    queryMocks: {},
   };
 
   afterEach(() => {
@@ -63,6 +74,23 @@ export function useFullModule(schedule: boolean = true): TestEnvironment {
     te.containers.redis = await new RedisContainer()
       .withPassword("redispass")
       .start();
+
+    te.queryMocks = {
+      [GetPlayerInfoQuery.name]: jest.fn((q: GetPlayerInfoQuery) => {
+        return new GetPlayerInfoQueryResult(
+          q.playerId,
+          q.version,
+          1000,
+          0.5,
+          2,
+          50,
+          BanStatus.NOT_BANNED,
+        );
+      }),
+      [GetSessionByUserQuery.name]: jest.fn((q: GetSessionByUserQuery) => {
+        return new GetSessionByUserQueryResult(undefined);
+      }),
+    };
 
     te.module = await Test.createTestingModule({
       imports: [
@@ -83,7 +111,16 @@ export function useFullModule(schedule: boolean = true): TestEnvironment {
         }),
         TypeOrmModule.forFeature(Entities),
         MatchmakerModule,
-        ...(schedule ? [ScheduleModule.forRoot()] : []),
+      ],
+      providers: [
+        testMockQuery(
+          GetPlayerInfoQuery,
+          te.queryMocks[GetPlayerInfoQuery.name],
+        ),
+        testMockQuery(
+          GetSessionByUserQuery,
+          te.queryMocks[GetSessionByUserQuery.name],
+        ),
       ],
     }).compile();
 
@@ -104,6 +141,8 @@ export function useFullModule(schedule: boolean = true): TestEnvironment {
     te.repo = (con) => te.module.get(getRepositoryToken(con));
     te.ebus = te.module.get(EventBus);
     te.ebusSpy = jest.spyOn(te.ebus, "publish");
+
+    // Mocks:
   });
 
   afterAll(async () => {

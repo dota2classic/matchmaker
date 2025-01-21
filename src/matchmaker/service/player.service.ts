@@ -47,7 +47,6 @@ export class PlayerService {
 
   async preparePartyForQueue(party: Party) {
     const plrs = party.players.map((it) => it.steamId);
-    console.log(JSON.stringify(party));
 
     const resolvedScores = await Promise.all(
       plrs.map(async (steamId) => {
@@ -56,7 +55,6 @@ export class PlayerService {
           GetSessionByUserQueryResult
         >(new GetSessionByUserQuery(new PlayerId(steamId)));
 
-        console.log(isInGame);
         //
         if (isInGame.serverUrl) {
           throw new Error("Can't queue while in game");
@@ -67,6 +65,9 @@ export class PlayerService {
           GetPlayerInfoQueryResult
         >(new GetPlayerInfoQuery(new PlayerId(steamId), Dota2Version.Dota_684));
 
+        if (mmr.banStatus.isBanned) {
+          throw new Error("Can't queue when banned");
+        }
         return this.getPlayerScore(mmr.mmr, mmr.recentWinrate, mmr.gamesPlayed);
       }),
     );

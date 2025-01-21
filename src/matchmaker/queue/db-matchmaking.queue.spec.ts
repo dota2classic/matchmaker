@@ -14,6 +14,16 @@ import {
 } from "@/gateway/shared-types/matchmaking-mode";
 import { QueueUpdatedEvent } from "@/gateway/events/queue-updated.event";
 import { DataSource } from "typeorm";
+import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
+import {
+  BanStatus,
+  GetPlayerInfoQueryResult,
+} from "@/gateway/queries/GetPlayerInfo/get-player-info-query.result";
+import { PlayerId } from "@/gateway/shared-types/player-id";
+import { Dota2Version } from "@/gateway/shared-types/dota2version";
+import { createTestingUtils } from "@/test/party-queue-test.utils";
+import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
+import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
 import SpyInstance = jest.SpyInstance;
 
 describe("DbMatchmakingQueue", () => {
@@ -22,6 +32,13 @@ describe("DbMatchmakingQueue", () => {
   let q: DbMatchmakingQueue;
   let ebus: EventBus;
   let spy: SpyInstance;
+
+  const {
+    expectInviteDeleted,
+    expectPartyHasPlayer,
+    expectPartyHasNotPlayer,
+    expectPartyInQueue,
+  } = createTestingUtils(te);
 
   beforeEach(async () => {
     q = te.module.get(DbMatchmakingQueue);
@@ -109,16 +126,48 @@ describe("DbMatchmakingQueue", () => {
       },
     );
 
-    it.skip("should not update if queue is locked", async () => {
+    it("should not enter queue if player resolves to be banned", async () => {
       // given
-      await setQueueLocked(te, true);
-      const p1 = await createParty(te, [], [testUser()]);
+      const party = await createParty(te, [], [testUser()]);
+      te.queryMocks[GetPlayerInfoQuery.name].mockReturnValueOnce(
+        new GetPlayerInfoQueryResult(
+          new PlayerId(party.leader),
+          Dota2Version.Dota_684,
+          1234,
+          0.5,
+          0.5,
+          50,
+          BanStatus.PERMA_BAN,
+        ),
+      );
 
       // when
-      await q.enterQueue(p1, [MatchmakingMode.UNRANKED]);
+      await q.enterQueue(party, [MatchmakingMode.UNRANKED]);
 
       // then
-      expect(spy).toHaveBeenCalledTimes(0);
+      await expectPartyInQueue(party.id, false);
+    });
+
+    it("should not enter queue if player resolves to be in another game", async () => {
+      // given
+      const party = await createParty(te, [], [testUser(), testUser()]);
+
+      const mock = (q: GetSessionByUserQuery) => {
+        if (q.playerId.value === party.leader) {
+          return new GetSessionByUserQueryResult(undefined);
+        } else {
+          return new GetSessionByUserQueryResult("serverurl");
+        }
+      };
+      te.queryMocks[GetSessionByUserQuery.name]
+        .mockImplementationOnce(mock)
+        .mockImplementationOnce(mock);
+
+      // when
+      await q.enterQueue(party, [MatchmakingMode.UNRANKED]);
+
+      // then
+      await expectPartyInQueue(party.id, false);
     });
   });
 

@@ -23,7 +23,7 @@ import { Party } from "@/matchmaker/entity/party";
 import { QueueService } from "@/matchmaker/service/queue.service";
 
 describe("AppController (e2e)", () => {
-  const te = useFullModule(false);
+  const te = useFullModule();
 
   let redisClient: Redis;
 
@@ -38,8 +38,8 @@ describe("AppController (e2e)", () => {
   });
 
   afterEach(() => {
-    redisClient.disconnect()
-  })
+    redisClient.disconnect();
+  });
 
   const publish = async (t: any) =>
     redisClient.publish(t.constructor.name, JSON.stringify(t));
@@ -86,32 +86,24 @@ describe("AppController (e2e)", () => {
       const room = await createRoom(te, MatchmakingMode.SOLOMID, [p1], [p2]);
       await te.service(ReadyCheckService).startReadyCheck(room);
 
-      console.log("Ready check start");
-
       const invite = await te
         .repo(PartyInvite)
         .save(new PartyInvite(p1.id, u1, u3));
 
-      console.log("invite created");
-
       // when
       await te.service(PartyService).acceptInvite(invite.id);
-      console.log("invite accepted");
       await te
         .service(ReadyCheckService)
         .submitReadyCheck(room.id, u1, ReadyState.READY);
-      console.log("ready check submit 1");
       await te
         .service(ReadyCheckService)
         .submitReadyCheck(room.id, u2, ReadyState.READY);
-      console.log("ready check submit 2");
       await sleep(1000);
 
       // Results:
       // 1) Room should be left intact: u1 vs u2
       // 2) Party p1 should now have u1 and u3
 
-      console.log("results");
       expect(te.ebusSpy).toReceiveCall(
         new RoomReadyEvent(
           room.id,

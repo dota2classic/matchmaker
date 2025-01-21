@@ -37,6 +37,7 @@ export class DbMatchmakingQueue {
       await this.playerService.preparePartyForQueue(party);
     } catch (e) {
       this.logger.error("Prevented bad party from entering queue", e);
+      return;
     }
 
     // Contract #1

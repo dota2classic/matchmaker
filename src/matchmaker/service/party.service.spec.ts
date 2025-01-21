@@ -9,41 +9,19 @@ import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 import { PartyInviteExpiredEvent } from "@/gateway/events/party/party-invite-expired.event";
 import { v4 } from "uuid";
 import { QueueUpdatedEvent } from "@/gateway/events/queue-updated.event";
+import { createTestingUtils } from "@/test/party-queue-test.utils";
 
 describe("PartyService", () => {
   const te = useFullModule();
 
   let partyService: PartyService;
 
-  const expectPartyHasPlayer = async (
-    partyId: string,
-    plr: string,
-    not: boolean = false,
-  ) => {
-    const party: Party = await te
-      .repo<Party>(Party)
-      .findOneOrFail({ where: { id: partyId } });
-
-    let matcher: any = expect(party.players);
-    if (not) matcher = matcher.not;
-    return matcher.toPartiallyContain({ steamId: plr });
-  };
-
-  const expectPartyHasNotPlayer = (id: string, plr: string) =>
-    expectPartyHasPlayer(id, plr, true);
-
-  const expectPartyInQueue = async (id: string, inQueue: boolean) => {
-    const party: Party = await te
-      .repo<Party>(Party)
-      .findOneOrFail({ where: { id } });
-
-    return expect(party.inQueue).toEqual(inQueue);
-  };
-
-  const expectInviteDeleted = (id: string) =>
-    expect(te.repo(PartyInvite).exists({ where: { id: id } })).resolves.toEqual(
-      false,
-    );
+  const {
+    expectInviteDeleted,
+    expectPartyHasPlayer,
+    expectPartyHasNotPlayer,
+    expectPartyInQueue,
+  } = createTestingUtils(te);
 
   beforeAll(() => {
     partyService = te.service(PartyService);
