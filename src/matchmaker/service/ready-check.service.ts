@@ -218,7 +218,7 @@ export class ReadyCheckService {
     const notAccepted = room.players.filter(
       (t) =>
         t.readyState === ReadyState.DECLINE ||
-        t.readyState === ReadyState.TIMEOU,
+        t.readyState === ReadyState.TIMEOUT,
     );
     return [accepted, notAccepted];
   }
