@@ -14,6 +14,36 @@ describe("PartyService", () => {
 
   let partyService: PartyService;
 
+  const expectPartyHasPlayer = async (
+    partyId: string,
+    plr: string,
+    not: boolean = false,
+  ) => {
+    const party: Party = await te
+      .repo<Party>(Party)
+      .findOneOrFail({ where: { id: partyId } });
+
+    let matcher: any = expect(party.players);
+    if (not) matcher = matcher.not;
+    return matcher.toPartiallyContain({ steamId: plr });
+  };
+
+  const expectPartyHasNotPlayer = (id: string, plr: string) =>
+    expectPartyHasPlayer(id, plr, true);
+
+  const expectPartyInQueue = async (id: string, inQueue: boolean) => {
+    const party: Party = await te
+      .repo<Party>(Party)
+      .findOneOrFail({ where: { id } });
+
+    return expect(party.inQueue).toEqual(inQueue);
+  };
+
+  const expectInviteDeleted = (id: string) =>
+    expect(te.repo(PartyInvite).exists({ where: { id: id } })).resolves.toEqual(
+      false,
+    );
+
   beforeAll(() => {
     partyService = te.service(PartyService);
   });
@@ -116,28 +146,6 @@ describe("PartyService", () => {
   });
 
   describe("acceptInvite", () => {
-    const expectPartyHasPlayer = async (
-      partyId: string,
-      plr: string,
-      not: boolean = false,
-    ) => {
-      const party: Party = await te
-        .repo<Party>(Party)
-        .findOneOrFail({ where: { id: partyId } });
-
-      let matcher: any = expect(party.players);
-      if (not) matcher = matcher.not;
-      return matcher.toPartiallyContain({ steamId: plr });
-    };
-
-    const expectPartyHasNotPlayer = (id: string, plr: string) =>
-      expectPartyHasPlayer(id, plr, true);
-
-    const expectInviteDeleted = (id: string) =>
-      expect(
-        te.repo(PartyInvite).exists({ where: { id: id } }),
-      ).resolves.toEqual(false);
-
     it("should add to party if invite is valid", async () => {
       // given
       const u1 = testUser();
@@ -263,9 +271,57 @@ describe("PartyService", () => {
       );
     });
 
+    it("should remove parties from queue when invite accepted", async () => {
+      // given
+      const u3 = testUser();
+      const p1 = await createParty(
+        te,
+        [MatchmakingMode.UNRANKED],
+        [testUser()],
+        true,
+      );
+      const p2 = await createParty(
+        te,
+        [MatchmakingMode.UNRANKED],
+        [testUser(), u3],
+        true,
+      );
+
+      const invite = await te
+        .repo(PartyInvite)
+        .save(new PartyInvite(p1.id, p1.leader, u3));
+
+      // when
+      await partyService.acceptInvite(invite.id);
+
+      // then
+      await expectInviteDeleted(invite.id);
+      await expectPartyHasPlayer(p1.id, u3);
+      await expectPartyHasNotPlayer(p2.id, u3);
+      await expectPartyInQueue(p1.id, false);
+      await expectPartyInQueue(p2.id, false);
+    });
+
     it("should do nothing if invite doesnt exist", async () => {
       await partyService.declineInvite(v4());
       expect(te.ebusSpy).toBeCalledTimes(0);
+    });
+  });
+
+  describe("leaveParty", () => {
+    it("should leave from party if party exists", async () => {
+      // given
+      const u1 = testUser();
+      const u2 = testUser();
+      const p1 = await createParty(te, [], [u1, u2], true);
+
+      // when
+      await partyService.leaveCurrentParty(u2);
+
+      // then
+      await expectPartyHasPlayer(p1.id, u1);
+      await expectPartyHasNotPlayer(p1.id, u2);
+      await expectPartyInQueue(p1.id, false);
     });
   });
 });

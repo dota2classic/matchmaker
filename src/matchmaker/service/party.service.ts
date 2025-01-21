@@ -169,11 +169,17 @@ export class PartyService {
 
       this.ebus.publish(new PartyInviteExpiredEvent(invite.id, invite.invited));
     });
+
+    // And then, leave queue
+    await this.queue.leaveQueue([invite.party]);
   }
 
   public async leaveCurrentParty(steamId: string) {
     const party = await this.findPartyOf(steamId);
     if (!party) return;
+
+    // Leave party from queue
+    await this.queue.leaveQueue([party]);
 
     await this.datasource.transaction(async (em) => {
       // Find existing membership
