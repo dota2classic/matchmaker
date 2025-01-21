@@ -8,6 +8,7 @@ import { PartyInvite } from "@/matchmaker/entity/party-invite";
 import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 import { PartyInviteExpiredEvent } from "@/gateway/events/party/party-invite-expired.event";
 import { v4 } from "uuid";
+import { QueueUpdatedEvent } from "@/gateway/events/queue-updated.event";
 
 describe("PartyService", () => {
   const te = useFullModule();
@@ -313,7 +314,12 @@ describe("PartyService", () => {
       // given
       const u1 = testUser();
       const u2 = testUser();
-      const p1 = await createParty(te, [], [u1, u2], true);
+      const p1 = await createParty(
+        te,
+        [MatchmakingMode.UNRANKED],
+        [u1, u2],
+        true,
+      );
 
       // when
       await partyService.leaveCurrentParty(u2);
@@ -322,6 +328,29 @@ describe("PartyService", () => {
       await expectPartyHasPlayer(p1.id, u1);
       await expectPartyHasNotPlayer(p1.id, u2);
       await expectPartyInQueue(p1.id, false);
+      expect(te.ebusSpy).toHaveBeenNthCalledWith(
+        1,
+        new PartyUpdatedEvent(
+          p1.id,
+          u1,
+          [u1, u2],
+          [MatchmakingMode.UNRANKED],
+          false,
+        ),
+      );
+      expect(te.ebusSpy.mock.calls[1][0]).toBeInstanceOf(QueueUpdatedEvent);
+      expect(te.ebusSpy).toHaveBeenNthCalledWith(
+        3,
+        new PartyUpdatedEvent(
+          p1.id,
+          u1,
+          [u1],
+          [MatchmakingMode.UNRANKED],
+          false,
+        ),
+      );
     });
   });
 });
+// {"partyId":"61d4719a-c734-4f96-a02f-e3ae831fa76b","leaderId":"351856","players":["351856","601029"],"modes":[1],"inQueue":false}
+// {"inQueue": false, "leaderId": "351856", "modes": [1], "partyId": "61d4719a-c734-4f96-a02f-e3ae831fa76b", "players": ["351856"]}

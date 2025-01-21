@@ -197,23 +197,28 @@ export class PartyService {
       // First, delete party membership
       await em.remove(PlayerInParty, partyMembership);
 
+      // Update old party
+      partyMembership.party.players = partyMembership.party.players.filter(
+        (plr) => plr.steamId !== steamId,
+      );
+
       // If we were a leader, try to make another leader
       if (partyMembership.isLeader) {
-        const p = partyMembership.party;
-        const newLeader = p.players.find((plr) => plr.steamId !== steamId);
+        const newLeader = partyMembership.party.players.find(
+          (plr) => plr.steamId !== steamId,
+        );
         // There is another player in party, make him a leader
         if (newLeader) {
           newLeader.isLeader = true;
           await em.save(PlayerInParty, newLeader);
           // Remove invited player from entity for event
-          partyMembership.party.players = partyMembership.party.players.filter(
-            (plr) => plr.steamId !== steamId,
-          );
-          // Update old party
-          await this.ebus.publish(partyMembership.party.snapshotEvent());
         } else {
           // Well, its dead party to be cleaned up later. We're good
         }
+      }
+
+      if (partyMembership.party.players.length > 0) {
+        await this.ebus.publish(partyMembership.party.snapshotEvent());
       }
     });
   }
