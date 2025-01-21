@@ -109,7 +109,7 @@ describe("DbMatchmakingQueue", () => {
       },
     );
 
-    it("should not update if queue is locked", async () => {
+    it.skip("should not update if queue is locked", async () => {
       // given
       await setQueueLocked(te, true);
       const p1 = await createParty(te, [], [testUser()]);

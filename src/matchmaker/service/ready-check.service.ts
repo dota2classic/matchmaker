@@ -14,6 +14,7 @@ import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { ReadyStateUpdatedEvent } from "@/gateway/events/ready-state-updated.event";
 import { RoomNotReadyEvent } from "@/gateway/events/room-not-ready.event";
+import * as assert from "assert";
 
 @Injectable()
 export class ReadyCheckService {
@@ -62,7 +63,7 @@ export class ReadyCheckService {
 
     await Promise.all(
       expiredRooms.map(async (room) => {
-        room = await this.timeoutPendingReadyChecks(room);
+        await this.timeoutPendingReadyChecks(room.id);
         await this.finishReadyCheck(room.id);
       }),
     );
@@ -99,11 +100,15 @@ export class ReadyCheckService {
       where: { id: roomId },
       relations: ["players"],
     });
-
     if (room.readyCheckFinishedAt) {
       // It's already finished
       return;
     }
+    assert(
+      room.players.filter((t) => t.readyState === ReadyState.PENDING).length ===
+        0,
+      "Can't call finishReadyCheck when ready check is not resolved yet",
+    );
 
     await this.roomRepository.update(
       {
@@ -124,7 +129,12 @@ export class ReadyCheckService {
     }
   }
 
-  private async timeoutPendingReadyChecks(room: Room): Promise<Room> {
+  public async timeoutPendingReadyChecks(roomId: string): Promise<Room> {
+    const room = await this.roomRepository.findOneOrFail({
+      where: { id: roomId },
+      relations: ["players"],
+    });
+
     const pendingPlayers = room.players.filter(
       (it) => it.readyState === ReadyState.PENDING,
     );

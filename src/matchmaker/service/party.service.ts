@@ -129,7 +129,7 @@ export class PartyService {
     if (!invite) return;
 
     await this.partyInviteRepository.remove(invite);
-    this.ebus.publish(new PartyInviteExpiredEvent(invite.id, invite.invited));
+    this.ebus.publish(new PartyInviteExpiredEvent(inviteId, invite.invited));
   }
 
   public async acceptInvite(inviteId: string) {

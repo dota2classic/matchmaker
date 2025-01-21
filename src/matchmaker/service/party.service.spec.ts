@@ -4,7 +4,6 @@ import { PartyService } from "@/matchmaker/service/party.service";
 import { Party } from "@/matchmaker/entity/party";
 import { DeepPartial } from "typeorm";
 import { PartyInviteCreatedEvent } from "@/gateway/events/party/party-invite-created.event";
-import { PlayerId } from "@/gateway/shared-types/player-id";
 import { PartyInvite } from "@/matchmaker/entity/party-invite";
 import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 import { PartyInviteExpiredEvent } from "@/gateway/events/party/party-invite-expired.event";
@@ -79,8 +78,8 @@ describe("PartyService", () => {
       expect(te.ebusSpy).toReceiveCall(
         expect.objectContaining({
           id: expect.any(String),
-          leaderId: new PlayerId(u1),
-          invited: new PlayerId(u2),
+          leaderId: u1,
+          invited: u2,
           partyId: p.id,
         } satisfies PartyInviteCreatedEvent),
       );

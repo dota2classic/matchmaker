@@ -48,14 +48,17 @@ describe("ReadyCheckService", () => {
 
       await pirRepository.update(
         {
-          steamId: p1.players[0].steamId,
+          steamId: p1.leader,
         },
         {
           readyState: ReadyState.READY,
         },
       );
 
+      const some = await pirRepository.find({ where: { roomId: room.id } });
+
       // when
+      await rs.timeoutPendingReadyChecks(room.id);
       await rs.finishReadyCheck(room.id);
 
       // then
@@ -77,6 +80,15 @@ describe("ReadyCheckService", () => {
       );
       const room = await createRoom(te, MatchmakingMode.BOTS_2X2, [p1]);
       await rs.startReadyCheck(room);
+
+      await pirRepository.update(
+        {
+          steamId: p1.leader,
+        },
+        {
+          readyState: ReadyState.DECLINE,
+        },
+      );
 
       // when
       await rs.finishReadyCheck(room.id);
