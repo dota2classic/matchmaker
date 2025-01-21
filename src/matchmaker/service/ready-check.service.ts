@@ -13,6 +13,7 @@ import { PlayerId } from "@/gateway/shared-types/player-id";
 import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { ReadyStateUpdatedEvent } from "@/gateway/events/ready-state-updated.event";
+import { RoomNotReadyEvent } from "@/gateway/events/room-not-ready.event";
 
 @Injectable()
 export class ReadyCheckService {
@@ -146,6 +147,13 @@ export class ReadyCheckService {
     const goodPartyIds = new Set<string>();
     accepted.forEach((plr) => goodPartyIds.add(plr.partyId));
     await this.partyService.returnToQueues(Array.from(goodPartyIds));
+
+    await this.ebus.publish(
+      new RoomNotReadyEvent(
+        room.id,
+        accepted.concat(notAccepted).map((it) => it.steamId),
+      ),
+    );
   }
 
   private async readyStateUpdate(room: Room) {

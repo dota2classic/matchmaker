@@ -15,6 +15,7 @@ import { PlayerLeaveQueueRequestedEvent } from "@/gateway/events/mm/player-leave
 import { PartyInviteRequestedEvent } from "@/gateway/events/party/party-invite-requested.event";
 import { PartyInviteAcceptedEvent } from "@/gateway/events/party/party-invite-accepted.event";
 import { PartyLeaveRequestedEvent } from "@/gateway/events/party/party-leave-requested.event";
+import { ReadyStateReceivedEvent } from "@/gateway/events/ready-state-received.event";
 
 @Controller()
 export class MatchmakerController {
@@ -50,6 +51,11 @@ export class MatchmakerController {
     cmd: PlayerLeaveQueueRequestedEvent,
   ) {
     await this.ebus.publish(construct(PlayerLeaveQueueRequestedEvent, cmd));
+  }
+
+  @EventPattern(ReadyStateReceivedEvent.name)
+  public async ReadyStateReceivedEvent(cmd: ReadyStateReceivedEvent) {
+    await this.ebus.publish(construct(ReadyStateReceivedEvent, cmd));
   }
 
   @MessagePattern(GetPartyQuery.name)

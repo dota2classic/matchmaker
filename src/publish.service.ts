@@ -5,6 +5,10 @@ import { PartyInviteCreatedEvent } from "@/gateway/events/party/party-invite-cre
 import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
 import { PartyInviteExpiredEvent } from "@/gateway/events/party/party-invite-expired.event";
 import { QueueUpdatedEvent } from "@/gateway/events/queue-updated.event";
+import { ReadyCheckStartedEvent } from "@/gateway/events/ready-check-started.event";
+import { ReadyStateUpdatedEvent } from "@/gateway/events/ready-state-updated.event";
+import { RoomReadyEvent } from "@/gateway/events/room-ready.event";
+import { RoomNotReadyEvent } from "@/gateway/events/room-not-ready.event";
 
 @Injectable()
 export class PublishService implements OnApplicationBootstrap {
@@ -40,6 +44,11 @@ export class PublishService implements OnApplicationBootstrap {
       PartyInviteCreatedEvent,
       PartyUpdatedEvent,
       QueueUpdatedEvent,
+      ReadyCheckStartedEvent,
+      ReadyStateUpdatedEvent,
+
+      RoomReadyEvent,
+      RoomNotReadyEvent,
       // PartyInviteResultEvent,
       //
       // MatchmakingBannedEvent,

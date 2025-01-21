@@ -19,6 +19,7 @@ import { PlayerLeaveQueueRequestedHandler } from "@/matchmaker/event-handler/pla
 import { PartyInviteRequestedHandler } from "@/matchmaker/event-handler/party-invite-requested.handler";
 import { PartyInviteAcceptedHandler } from "@/matchmaker/event-handler/party-invite-accepted.handler";
 import { PartyLeaveRequestedHandler } from "@/matchmaker/event-handler/party-leave-requested.handler";
+import { ReadyStateReceivedHandler } from "@/matchmaker/event-handler/ready-state-received.handler";
 
 const EventHandlers = [
   PlayerEnterQueueRequestedHandler,
@@ -27,6 +28,7 @@ const EventHandlers = [
   PartyInviteRequestedHandler,
   PartyInviteAcceptedHandler,
   PartyLeaveRequestedHandler,
+  ReadyStateReceivedHandler,
 ];
 const QueryHandlers = [
   GetPartyHandler,
