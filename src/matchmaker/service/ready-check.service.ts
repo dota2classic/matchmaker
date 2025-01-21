@@ -50,9 +50,10 @@ export class ReadyCheckService {
   }
 
   @Cron(CronExpression.EVERY_SECOND)
-  public async expireReadyChecks(readyCheckDuration: string = "1m") {
+  public async expireReadyChecks(readyCheckDuration: string = "10s") {
     const expiredRooms = await this.roomRepository
       .createQueryBuilder("r")
+      .leftJoinAndSelect("r.players", "players")
       .where(
         "r.ready_check_started_at + :ready_check_duration::interval < now()",
         { ready_check_duration: readyCheckDuration },
@@ -60,7 +61,10 @@ export class ReadyCheckService {
       .getMany();
 
     await Promise.all(
-      expiredRooms.map((room) => this.finishReadyCheck(room.id)),
+      expiredRooms.map(async (room) => {
+        room = await this.timeoutPendingReadyChecks(room);
+        await this.finishReadyCheck(room.id);
+      }),
     );
   }
 
@@ -85,9 +89,9 @@ export class ReadyCheckService {
     plr.readyState = state;
     await this.playerInRoomRepository.save(plr);
 
-    if (!(await this.checkIsRoomReady(room))) {
-      await this.readyStateUpdate(room);
-    }
+    await this.readyStateUpdate(room);
+
+    await this.checkIsRoomReady(room);
   }
 
   public async finishReadyCheck(roomId: string) {
@@ -111,20 +115,41 @@ export class ReadyCheckService {
     // Delete room, not needed anymore
     await this.roomRepository.delete({ id: room.id });
 
-    const [accepted, notAccepted] = this.readyCheckResult(room);
+    const [accepted, declined] = this.readyCheckResult(room);
 
-    if (notAccepted.length > 0) {
-      await this.onFailedRoom(room, accepted, notAccepted);
+    if (declined.length > 0) {
+      await this.onFailedRoom(room, accepted, declined);
     } else {
       await this.onSucceededRoom(room);
     }
+  }
+
+  private async timeoutPendingReadyChecks(room: Room): Promise<Room> {
+    const pendingPlayers = room.players.filter(
+      (it) => it.readyState === ReadyState.PENDING,
+    );
+
+    pendingPlayers.forEach((plr) => (plr.readyState = ReadyState.TIMEOUT));
+    await this.playerInRoomRepository.save(pendingPlayers);
+
+    return room;
   }
 
   private async checkIsRoomReady(room: Room): Promise<boolean> {
     const readyPlayers = room.players.filter(
       (t) => t.readyState === ReadyState.READY,
     );
+
+    const declinedPlayers = room.players.filter(
+      (t) =>
+        t.readyState === ReadyState.DECLINE ||
+        t.readyState === ReadyState.TIMEOUT,
+    );
+
     if (readyPlayers.length === room.players.length) {
+      await this.finishReadyCheck(room.id);
+      return true;
+    } else if (declinedPlayers.length > 0) {
       await this.finishReadyCheck(room.id);
       return true;
     }
@@ -165,7 +190,6 @@ export class ReadyCheckService {
           steamId: plr.steamId,
           readyState: plr.readyState,
         })),
-        { accepted: 0, total: 0 },
       ),
     );
   }
@@ -187,10 +211,14 @@ export class ReadyCheckService {
 
   private readyCheckResult(room: Room): [PlayerInRoom[], PlayerInRoom[]] {
     const accepted = room.players.filter(
-      (t) => t.readyState === ReadyState.READY,
+      (t) =>
+        t.readyState === ReadyState.READY ||
+        t.readyState === ReadyState.PENDING,
     );
     const notAccepted = room.players.filter(
-      (t) => t.readyState !== ReadyState.READY,
+      (t) =>
+        t.readyState === ReadyState.DECLINE ||
+        t.readyState === ReadyState.TIMEOU,
     );
     return [accepted, notAccepted];
   }

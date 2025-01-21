@@ -8,6 +8,7 @@ import { QueueMeta } from "@/matchmaker/entity/queue-meta";
 import { Repository } from "typeorm";
 import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { EventBus } from "@nestjs/cqrs";
+import { inspect } from "util";
 
 async function bootstrap() {
   const config = new ConfigService(configuration());
@@ -24,7 +25,7 @@ async function bootstrap() {
 
   const ebus: EventBus = app.get(EventBus);
   ebus.subscribe((e) => {
-    console.log(e);
+    console.log(inspect(e));
   });
 
   const repo: Repository<QueueMeta> = app.get(getRepositoryToken(QueueMeta));
