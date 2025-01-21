@@ -77,6 +77,22 @@ export class PartyService {
     this.logger.log(`Removed ${trash.length} trash parties`);
   }
 
+  @Cron(CronExpression.EVERY_SECOND)
+  public async expireReadyChecks(readyCheckDuration: string = "1m") {
+    const expiredInvites = await this.partyInviteRepository
+      .createQueryBuilder("r")
+      .where("r.created_at + :ready_check_duration::interval < now()", {
+        ready_check_duration: readyCheckDuration,
+      })
+      .getMany();
+
+    await this.partyInviteRepository.remove(expiredInvites);
+
+    expiredInvites.map((invite) =>
+      this.ebus.publish(new PartyInviteExpiredEvent(invite.id, invite.invited)),
+    );
+  }
+
   async returnToQueues(goodPartyIds: string[]) {
     const parties = await this.partyRepository.find({
       where: {
@@ -105,14 +121,6 @@ export class PartyService {
     }
   }
 
-  private async leaveParty(steamId: string) {
-    const p = await this.findPartyOf(steamId);
-    if (!p) return;
-    // If leader =>
-    if (p.leader === steamId) {
-    }
-  }
-
   public async declineInvite(inviteId: string) {
     const invite = await this.partyInviteRepository.findOne({
       where: { id: inviteId },
@@ -138,53 +146,13 @@ export class PartyService {
       return;
     }
 
+    // Leave current party
+    await this.leaveCurrentParty(invite.invited);
+
+    // Then, join new party
     await this.datasource.transaction(async (em) => {
-      // Find existing membership
-      let partyMembership: PlayerInParty | null =
-        await em.findOne<PlayerInParty>(PlayerInParty, {
-          where: {
-            steamId: invite.invited,
-          },
-          relations: ["party"],
-        });
-
-      // Gotta do some cleaning
-      if (partyMembership) {
-        // First, we change our party
-        partyMembership.partyId = invite.partyId;
-        await em.update<PlayerInParty>(
-          PlayerInParty,
-          {
-            steamId: invite.invited,
-          },
-          { partyId: invite.partyId, isLeader: false },
-        );
-
-        // If leader, try to make another leader
-        if (partyMembership.isLeader) {
-          const p = partyMembership.party;
-          const newLeader = p.players.find(
-            (plr) => plr.steamId !== invite.invited,
-          );
-          // There is another player in party, make him a leader
-          if (newLeader) {
-            newLeader.isLeader = true;
-            await em.save(PlayerInParty, newLeader);
-            // Remove invited player from entity for event
-            partyMembership.party.players =
-              partyMembership.party.players.filter(
-                (plr) => plr.steamId !== invite.invited,
-              );
-            // Update old party
-            await this.ebus.publish(partyMembership.party.snapshotEvent());
-          } else {
-            // Well, its dead party to be cleaned up later. We're good
-          }
-        }
-      } else {
-        partyMembership = new PlayerInParty(invite.invited, party.id, false);
-        await em.save(PlayerInParty, partyMembership);
-      }
+      let partyMembership = new PlayerInParty(invite.invited, party.id, false);
+      await em.save(PlayerInParty, partyMembership);
 
       const newParty = await em.findOneOrFail<Party>(Party, {
         where: { id: invite.partyId },
@@ -200,6 +168,47 @@ export class PartyService {
         .execute();
 
       this.ebus.publish(new PartyInviteExpiredEvent(invite.id, invite.invited));
+    });
+  }
+
+  public async leaveCurrentParty(steamId: string) {
+    const party = await this.findPartyOf(steamId);
+    if (!party) return;
+
+    await this.datasource.transaction(async (em) => {
+      // Find existing membership
+      let partyMembership: PlayerInParty | null =
+        await em.findOne<PlayerInParty>(PlayerInParty, {
+          where: {
+            steamId: steamId,
+          },
+          relations: ["party"],
+        });
+
+      if (!partyMembership) return;
+
+      // Gotta do some cleaning
+      // First, delete party membership
+      await em.remove(PlayerInParty, partyMembership);
+
+      // If we were a leader, try to make another leader
+      if (partyMembership.isLeader) {
+        const p = partyMembership.party;
+        const newLeader = p.players.find((plr) => plr.steamId !== steamId);
+        // There is another player in party, make him a leader
+        if (newLeader) {
+          newLeader.isLeader = true;
+          await em.save(PlayerInParty, newLeader);
+          // Remove invited player from entity for event
+          partyMembership.party.players = partyMembership.party.players.filter(
+            (plr) => plr.steamId !== steamId,
+          );
+          // Update old party
+          await this.ebus.publish(partyMembership.party.snapshotEvent());
+        } else {
+          // Well, its dead party to be cleaned up later. We're good
+        }
+      }
     });
   }
 }

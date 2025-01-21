@@ -27,6 +27,11 @@ export class QueueService {
       findGames: (entries) =>
         this.findSolomidGame(MatchmakingMode.SOLOMID, entries),
     },
+    {
+      mode: MatchmakingMode.BOTS,
+      priority: 10000,
+      findGames: (entries) => this.findBotsGame(MatchmakingMode.BOTS, entries),
+    },
   ];
 
   constructor(
@@ -196,5 +201,19 @@ export class QueueService {
     }
 
     return new GameBalance(mode, bestMatch.left, bestMatch.right);
+  }
+
+  /**
+   * 1 game per party
+   */
+  private async findBotsGame(
+    mode: MatchmakingMode,
+    pool: Party[],
+  ): Promise<GameBalance | undefined> {
+    if (pool.length === 0) return undefined;
+
+    const entry = pool.sort((a, b) => b.waitingScore - a.waitingScore)[0];
+
+    return new GameBalance(mode, [entry], []);
   }
 }

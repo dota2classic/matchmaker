@@ -13,6 +13,8 @@ import { GetQueueStateQueryResult } from "@/gateway/queries/QueueState/get-queue
 import { GetQueueStateQuery } from "@/gateway/queries/QueueState/get-queue-state.query";
 import { PlayerLeaveQueueRequestedEvent } from "@/gateway/events/mm/player-leave-queue-requested.event";
 import { PartyInviteRequestedEvent } from "@/gateway/events/party/party-invite-requested.event";
+import { PartyInviteAcceptedEvent } from "@/gateway/events/party/party-invite-accepted.event";
+import { PartyLeaveRequestedEvent } from "@/gateway/events/party/party-leave-requested.event";
 
 @Controller()
 export class MatchmakerController {
@@ -31,6 +33,16 @@ export class MatchmakerController {
   @EventPattern(PartyInviteRequestedEvent.name)
   public async PartyInviteRequestedEvent(cmd: PartyInviteRequestedEvent) {
     await this.ebus.publish(construct(PartyInviteRequestedEvent, cmd));
+  }
+
+  @EventPattern(PartyInviteAcceptedEvent.name)
+  public async PartyInviteAcceptedEvent(cmd: PartyInviteAcceptedEvent) {
+    await this.ebus.publish(construct(PartyInviteAcceptedEvent, cmd));
+  }
+
+  @EventPattern(PartyLeaveRequestedEvent.name)
+  public async PartyLeaveRequestedEvent(cmd: PartyLeaveRequestedEvent) {
+    await this.ebus.publish(construct(PartyLeaveRequestedEvent, cmd));
   }
 
   @EventPattern(PlayerLeaveQueueRequestedEvent.name)
