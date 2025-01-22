@@ -10,11 +10,8 @@ import { GameBalance } from "@/matchmaker/balance/game-balance";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { ReadyCheckStartedEvent } from "@/gateway/events/ready-check-started.event";
 import { ReadyState } from "@/gateway/events/ready-state-received.event";
-import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
-import { getRepositoryToken } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import SpyInstance = jest.SpyInstance;
 import { v4 } from "uuid";
+import SpyInstance = jest.SpyInstance;
 
 describe("RoomCreatedHandler", () => {
   const te = useFullModule();
@@ -65,5 +62,4 @@ describe("RoomCreatedHandler", () => {
       ]),
     );
   });
-
 });

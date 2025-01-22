@@ -10,7 +10,6 @@ import { RoomService } from "@/matchmaker/service/room.service";
 import { RoomCreatedEvent } from "@/matchmaker/event/room-created.event";
 import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
 import { createDateComparator } from "@/util/date-comparator";
-import { MetricsService } from "@/metrics/metrics.service";
 
 @Injectable()
 export class QueueService {
@@ -47,15 +46,10 @@ export class QueueService {
     private readonly queue: DbMatchmakingQueue,
     private readonly roomService: RoomService,
     private readonly ebus: EventBus,
-    private readonly metrics: MetricsService,
   ) {}
 
   @Cron(CronExpression.EVERY_10_SECONDS)
   public async cycle() {
-    this.metrics.recordAvgDifference(
-      MatchmakingMode.UNRANKED,
-      Math.random() * 100,
-    );
     if (this.isCycleInProgress) {
       this.logger.log("Another cycle is in progress, skipping...");
       return;

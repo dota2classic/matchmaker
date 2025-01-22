@@ -7,7 +7,7 @@ import { Room } from "@/matchmaker/entity/room";
 import { MetricsService } from "@/metrics/metrics.service";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { GameBalance } from "@/matchmaker/balance/game-balance";
-import { Logger } from "@nestjs/common";
+import { Logger, Optional } from "@nestjs/common";
 
 @EventsHandler(RoomCreatedEvent)
 export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
@@ -18,7 +18,7 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
     private readonly readyCheckService: ReadyCheckService,
-    private readonly metrics: MetricsService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   async handle(event: RoomCreatedEvent) {
@@ -34,6 +34,7 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
   }
 
   private doMetrics(room: Room, event: GameBalance) {
+    if (!this.metrics) return;
     if (room.lobbyType !== MatchmakingMode.UNRANKED) return;
     const diff = Math.abs(
       event.left.reduce((a, b) => a + b.score, 0) -
