@@ -22,23 +22,23 @@ export class QueueService {
       findGames: (entries) =>
         this.findBalancedGame(MatchmakingMode.UNRANKED, entries, 5, 5000),
     },
-    // {
-    //   mode: MatchmakingMode.SOLOMID,
-    //   priority: 100,
-    //   findGames: (entries) =>
-    //     this.findSolomidGame(MatchmakingMode.SOLOMID, entries),
-    // },
-    // {
-    //   mode: MatchmakingMode.BOTS,
-    //   priority: 10000,
-    //   findGames: (entries) => this.findBotsGame(MatchmakingMode.BOTS, entries),
-    // },
-    // {
-    //   mode: MatchmakingMode.BOTS_2X2,
-    //   priority: 10,
-    //   findGames: (entries) =>
-    //     this.findBalancedGame(MatchmakingMode.BOTS_2X2, entries, 2, 5000),
-    // },
+    {
+      mode: MatchmakingMode.SOLOMID,
+      priority: 100,
+      findGames: (entries) =>
+        this.findSolomidGame(MatchmakingMode.SOLOMID, entries),
+    },
+    {
+      mode: MatchmakingMode.BOTS,
+      priority: 10000,
+      findGames: (entries) => this.findBotsGame(MatchmakingMode.BOTS, entries),
+    },
+    {
+      mode: MatchmakingMode.BOTS_2X2,
+      priority: 10,
+      findGames: (entries) =>
+        this.findBalancedGame(MatchmakingMode.BOTS_2X2, entries, 2, 5000),
+    },
   ];
 
   constructor(
