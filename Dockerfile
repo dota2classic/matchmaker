@@ -23,10 +23,9 @@ RUN yarn build
 
 FROM base AS production
 
-CMD ["node", "dist/src/main"]
+
 COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
 COPY --from=build /usr/src/app/package.json .
 
-CMD ["sh", "-c", "yarn start:prod"]
-
+CMD ["node", "dist/src/main"]
