@@ -22,23 +22,23 @@ export class QueueService {
       findGames: (entries) =>
         this.findBalancedGame(MatchmakingMode.UNRANKED, entries, 5, 5000),
     },
-    {
-      mode: MatchmakingMode.SOLOMID,
-      priority: 100,
-      findGames: (entries) =>
-        this.findSolomidGame(MatchmakingMode.SOLOMID, entries),
-    },
-    {
-      mode: MatchmakingMode.BOTS,
-      priority: 10000,
-      findGames: (entries) => this.findBotsGame(MatchmakingMode.BOTS, entries),
-    },
-    {
-      mode: MatchmakingMode.BOTS_2X2,
-      priority: 10,
-      findGames: (entries) =>
-        this.findBalancedGame(MatchmakingMode.BOTS_2X2, entries, 2, 5000),
-    },
+    // {
+    //   mode: MatchmakingMode.SOLOMID,
+    //   priority: 100,
+    //   findGames: (entries) =>
+    //     this.findSolomidGame(MatchmakingMode.SOLOMID, entries),
+    // },
+    // {
+    //   mode: MatchmakingMode.BOTS,
+    //   priority: 10000,
+    //   findGames: (entries) => this.findBotsGame(MatchmakingMode.BOTS, entries),
+    // },
+    // {
+    //   mode: MatchmakingMode.BOTS_2X2,
+    //   priority: 10,
+    //   findGames: (entries) =>
+    //     this.findBalancedGame(MatchmakingMode.BOTS_2X2, entries, 2, 5000),
+    // },
   ];
 
   constructor(
@@ -117,9 +117,10 @@ export class QueueService {
   }
 
   private async findAllGames(eligible: Party[], bc: BalanceConfig) {
-    let pool = [...eligible]
-      .filter((it) => it.enterQueueAt!)
-      .sort(createDateComparator<Party>((it) => it.enterQueueAt!));
+    let pool = [...eligible].sort(
+      createDateComparator<Party>((it) => it.enterQueueAt!),
+    );
+
     let r: GameBalance | undefined = undefined;
 
     const foundGames: GameBalance[] = [];
@@ -140,7 +141,7 @@ export class QueueService {
     timeLimit: number = 5000,
   ): Promise<GameBalance | undefined> {
     // Let's first filter off this case
-    const totalPlayersInQ = pool.length;
+    const totalPlayersInQ = pool.reduce((a, b) => a + b.players.length, 0);
     if (totalPlayersInQ < teamSize * 2) {
       return;
     }
