@@ -36,8 +36,6 @@ describe("RoomCreatedHandler", () => {
       ),
     );
 
-    throw "Tmp";
-
     // then
     expect(spy).toHaveBeenCalledTimes(0);
   });
