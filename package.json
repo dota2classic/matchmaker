@@ -50,6 +50,7 @@
     "@types/jest": "^29.5.2",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.3.1",
+    "@types/uuid": "^10.0.0",
     "@types/supertest": "^6.0.0",
     "@types/wtfnode": "^0.7.3",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
