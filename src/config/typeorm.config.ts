@@ -3,7 +3,7 @@ import configuration from "@/config/configuration";
 import { DataSource } from "typeorm";
 import Entities from "@/matchmaker/entity";
 
-const configService = new ConfigService(configuration("config.yaml"));
+const configService = new ConfigService(configuration("prod.config.yaml"));
 
 const AppDataSource = new DataSource({
   type: "postgres",

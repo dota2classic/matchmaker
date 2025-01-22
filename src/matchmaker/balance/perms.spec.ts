@@ -11,6 +11,7 @@ describe("permutations", () => {
     p.players = users.map(
       (usr, idx) => new PlayerInParty(usr, p.id, idx === 0),
     );
+    p.enterQueueAt = new Date();
 
     return p;
   };
@@ -22,10 +23,10 @@ describe("permutations", () => {
 
     let waitingScore = 0;
     for (let i = 0; i < left.length; i++) {
-      waitingScore += left[i].waitingScore;
+      waitingScore += Date.now() - left[i].enterQueueAt!.getTime();
     }
     for (let i = 0; i < right.length; i++) {
-      waitingScore += right[i].waitingScore;
+      waitingScore += Date.now() - right[i].enterQueueAt!.getTime();
     }
 
     // We want waitingScore to be highest, so we invert it
@@ -35,21 +36,12 @@ describe("permutations", () => {
     const comp1 = waitingScore * 100000;
 
     return comp1 + avgDiff;
-  }
-
+  };
 
   it("should find 1x1", () => {
-    const parties = [
-      fakeParty(testUser()),
-      fakeParty(testUser()),
-    ]
-    const m = findBestMatchBy(
-      parties,
-      1,
-      balanceFunction,
-      1000
-    );
+    const parties = [fakeParty(testUser()), fakeParty(testUser())];
+    const m = findBestMatchBy(parties, 1, balanceFunction, 1000);
 
-    expect(m).toBeDefined()
+    expect(m).toBeDefined();
   });
 });

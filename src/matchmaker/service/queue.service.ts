@@ -9,6 +9,7 @@ import { EventBus } from "@nestjs/cqrs";
 import { RoomService } from "@/matchmaker/service/room.service";
 import { RoomCreatedEvent } from "@/matchmaker/event/room-created.event";
 import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
+import { createDateComparator } from "@/util/date-comparator";
 
 @Injectable()
 export class QueueService {
@@ -78,7 +79,7 @@ export class QueueService {
     for (const balance of balances) {
       try {
         const room = await this.roomService.createRoom(balance);
-        await this.queue.leaveQueue(balance.left.concat(balance.right), true);
+        await this.queue.leaveQueue(balance.left.concat(balance.right), false);
         // Ok we're good
         this.ebus.publish(new RoomCreatedEvent(room.id, balance));
       } catch (e) {
@@ -99,6 +100,7 @@ export class QueueService {
       this.logger.log(`Player to balance for mode`, {
         lobby_type: balanceConfig.mode,
         party_count: taskPool.length,
+        player_count: taskPool.reduce((a, b) => a + b.players.length, 0),
       });
       const balances = await this.findAllGames(taskPool, balanceConfig);
 
@@ -115,7 +117,9 @@ export class QueueService {
   }
 
   private async findAllGames(eligible: Party[], bc: BalanceConfig) {
-    let pool = [...eligible];
+    let pool = [...eligible]
+      .filter((it) => it.enterQueueAt!)
+      .sort(createDateComparator<Party>((it) => it.enterQueueAt!));
     let r: GameBalance | undefined = undefined;
 
     const foundGames: GameBalance[] = [];
@@ -163,6 +167,14 @@ export class QueueService {
     return new GameBalance(mode, left, right);
   }
 
+  private getPartyWaitingScore(party: Party) {
+    let score = party.enterQueueAt
+      ? (Date.now() - party.enterQueueAt.getTime()) / 1000 / 10
+      : 0;
+    console.log("Party waiting score", party.enterQueueAt, score / 1000 / 10);
+    return score; // 10 seconds = 1 waiting score
+  }
+
   private balanceFunction = (left: Party[], right: Party[]) => {
     const lavg = left.reduce((a, b) => a + b.score, 0) / 5;
     const ravg = right.reduce((a, b) => a + b.score, 0) / 5;
@@ -170,10 +182,10 @@ export class QueueService {
 
     let waitingScore = 0;
     for (let i = 0; i < left.length; i++) {
-      waitingScore += left[i].waitingScore;
+      waitingScore += this.getPartyWaitingScore(left[i]);
     }
     for (let i = 0; i < right.length; i++) {
-      waitingScore += right[i].waitingScore;
+      waitingScore += this.getPartyWaitingScore(right[i]);
     }
 
     // We want waitingScore to be highest, so we invert it
@@ -218,7 +230,7 @@ export class QueueService {
   ): Promise<GameBalance | undefined> {
     if (pool.length === 0) return undefined;
 
-    const entry = pool.sort((a, b) => b.waitingScore - a.waitingScore)[0];
+    const entry = pool[0];
 
     return new GameBalance(mode, [entry], []);
   }

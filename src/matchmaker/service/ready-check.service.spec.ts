@@ -8,7 +8,7 @@ import {
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { ReadyCheckService } from "@/matchmaker/service/ready-check.service";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
-import { Repository } from "typeorm";
+import { DeepPartial, Repository } from "typeorm";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { ReadyState } from "@/gateway/events/ready-state-received.event";
 import { Party } from "@/matchmaker/entity/party";
@@ -32,18 +32,21 @@ describe("ReadyCheckService", () => {
   });
 
   describe("finishReadyCheck", () => {
-    it("should return good parties back to queue if ready check failed", async () => {
+    it("should return good parties back to queue and preserve enterQueueTime if ready check failed", async () => {
       // given
       const p1 = await createParty(
         te,
         [MatchmakingMode.BOTS_2X2],
         [testUser()],
+        true,
       );
       const p2 = await createParty(
         te,
         [MatchmakingMode.BOTS_2X2],
         [testUser()],
       );
+
+      const originalEnterQueueTime = p1.enterQueueAt;
       const room = await createRoom(te, MatchmakingMode.BOTS_2X2, [p1, p2]);
 
       await pirRepository.update(
@@ -61,14 +64,18 @@ describe("ReadyCheckService", () => {
       await rs.timeoutPendingReadyChecks(room.id);
       await rs.finishReadyCheck(room.id);
 
+      console.log(await partyRepository.findOne({ where: { id: p1.id } }));
       // then
       await expect(
         partyRepository.findOne({ where: { id: p1.id } }),
-      ).resolves.toMatchObject({ inQueue: true });
+      ).resolves.toMatchObject({
+        inQueue: true,
+        enterQueueAt: originalEnterQueueTime,
+      } satisfies DeepPartial<Party>);
 
       await expect(
         partyRepository.findOne({ where: { id: p2.id } }),
-      ).resolves.toMatchObject({ inQueue: false });
+      ).resolves.toMatchObject({ inQueue: false } satisfies DeepPartial<Party>);
     });
 
     it("should not return to queue parties with multiple players if one declined", async () => {

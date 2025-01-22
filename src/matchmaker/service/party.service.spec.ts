@@ -1,4 +1,9 @@
-import { createParty, testUser, useFullModule } from "@/test/useFullModule";
+import {
+  createParty,
+  expectPartyUpdate,
+  testUser,
+  useFullModule,
+} from "@/test/useFullModule";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { PartyService } from "@/matchmaker/service/party.service";
 import { Party } from "@/matchmaker/entity/party";
@@ -66,7 +71,7 @@ describe("PartyService", () => {
             },
           ],
           score: expect.any(Number),
-          waitingScore: 0,
+          enterQueueAt: null, // we are not in queue
           queueModes: [],
         } satisfies DeepPartial<Party>),
       );
@@ -138,10 +143,8 @@ describe("PartyService", () => {
       await partyService.acceptInvite(invite.id);
 
       // then
-      expect(te.ebusSpy).nthCalledWith(
-        1,
-        new PartyUpdatedEvent(p.id, u1, [u1, u2], [], false),
-      );
+      expectPartyUpdate(te.ebusSpy, p.id, [u1, u2], false, [], 1);
+
       expect(te.ebusSpy).nthCalledWith(
         2,
         new PartyInviteExpiredEvent(invite.id, invite.invited),

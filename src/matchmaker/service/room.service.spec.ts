@@ -56,7 +56,7 @@ describe("RoomService", () => {
             { steamId: testUser(), partyId: pid, isLeader: true, party: p },
           ];
           p.score = 0;
-          p.waitingScore = 0;
+          p.enterQueueAt = new Date();
           p.queueModes = [MatchmakingMode.UNRANKED];
           p.inQueue = false;
 

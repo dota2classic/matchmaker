@@ -29,7 +29,10 @@ import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-se
           username: config.get("postgres.username"),
           password: config.get("postgres.password"),
           entities: Entities,
-          synchronize: true,
+          synchronize: false,
+          dropSchema: false,
+          migrations: ["src/database/migrations/*-migration.ts"],
+          migrationsRun: true,
 
           ssl: false,
         };

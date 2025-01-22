@@ -100,7 +100,11 @@ export class PartyService {
       },
     });
 
-    await Promise.all(parties.map((party) => this.queue.enterQueue(party)));
+    await Promise.all(
+      parties.map((party) =>
+        this.queue.enterQueue(party, party.queueModes, false),
+      ),
+    );
   }
 
   public async invitePlayerToParty(inviter: string, invited: string) {

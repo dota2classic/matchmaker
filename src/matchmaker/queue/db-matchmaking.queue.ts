@@ -32,6 +32,7 @@ export class DbMatchmakingQueue {
   async enterQueue(
     party: Party,
     modes: MatchmakingMode[] = party.queueModes,
+    restartEnterTime: boolean = true,
   ): Promise<void> {
     try {
       await this.playerService.preparePartyForQueue(party);
@@ -51,6 +52,9 @@ export class DbMatchmakingQueue {
     party = await this.ds.transaction((em) => {
       party.inQueue = true;
       party.queueModes = modes;
+      if (restartEnterTime) {
+        party.enterQueueAt = new Date();
+      }
       return em.save(party);
     });
     await this.partyUpdated(party);
@@ -76,12 +80,15 @@ export class DbMatchmakingQueue {
 
   async leaveQueue(
     _entries: Party[],
-    bypassLock: boolean = false,
+    clearEnterQueueTime: boolean = true,
   ): Promise<void> {
     // if (!bypassLock && await this.isLocked()) return;
 
     let entries = _entries.filter((entry) => entry.inQueue);
-    entries.forEach((entry) => (entry.inQueue = false));
+    entries.forEach((entry) => {
+      entry.inQueue = false;
+      if (clearEnterQueueTime) entry.enterQueueAt = null;
+    });
     if (entries.length === 0) return;
 
     const updatedParties = await this.ds.transaction(async (em) => {
@@ -90,6 +97,7 @@ export class DbMatchmakingQueue {
         .update<Party>(Party)
         .set({
           inQueue: false,
+          enterQueueAt: clearEnterQueueTime ? null : undefined,
         })
         .where({
           id: In(entries.map((it) => it.id)),

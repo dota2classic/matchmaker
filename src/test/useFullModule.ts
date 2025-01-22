@@ -6,7 +6,7 @@ import {
 import { getRepositoryToken, TypeOrmModule } from "@nestjs/typeorm";
 import Entities from "@/matchmaker/entity";
 import { MatchmakerModule } from "@/matchmaker/matchmaker.module";
-import { ObjectLiteral, Repository } from "typeorm";
+import { DeepPartial, ObjectLiteral, Repository } from "typeorm";
 import { Party } from "@/matchmaker/entity/party";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
@@ -166,6 +166,7 @@ export async function createParty(
   let p = new Party();
   p.queueModes = modes;
   p.inQueue = inQueue;
+  p.enterQueueAt = inQueue ? new Date() : null;
   p = await pr.save(p);
 
   const pip = te.repo(PlayerInParty);
@@ -217,20 +218,22 @@ export async function createParties(
 
 export function expectPartyUpdate(
   spy: SpyInstance,
-  party: Party,
+  id: string,
+  players: string[],
   inQueue: boolean,
-  modes: MatchmakingMode[] = party.queueModes,
+  modes: MatchmakingMode[],
   nth = 1,
 ) {
   expect(spy).toHaveBeenNthCalledWith(
     nth,
-    new PartyUpdatedEvent(
-      party.id,
-      party.players[0].steamId,
-      party.players.map((it) => it.steamId),
+    expect.objectContaining({
+      partyId: id,
+      leaderId: players[0],
+      players,
       modes,
       inQueue,
-    ),
+      enterQueueAt: inQueue ? expect.any(String) : undefined,
+    } satisfies DeepPartial<PartyUpdatedEvent>),
   );
 }
 

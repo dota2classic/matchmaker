@@ -36,7 +36,7 @@ export class Party {
     default: null,
     type: "timestamptz",
   })
-  enterQueueAt: Date;
+  enterQueueAt: Date | null;
 
   @Column({
     type: "enum",
@@ -65,6 +65,7 @@ export class Party {
       this.players.map((plr) => plr.steamId),
       this.queueModes,
       this.inQueue,
+      this.enterQueueAt ? this.enterQueueAt.toISOString() : undefined,
     );
   }
 }

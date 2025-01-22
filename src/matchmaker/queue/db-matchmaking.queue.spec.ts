@@ -82,7 +82,7 @@ describe("DbMatchmakingQueue", () => {
         } satisfies QueueUpdatedEvent),
       );
 
-      expectPartyUpdate(spy, party, true, [
+      expectPartyUpdate(spy, party.id, [party.leader], true, [
         MatchmakingMode.UNRANKED,
         MatchmakingMode.BOTS_2X2,
       ]);
@@ -107,7 +107,7 @@ describe("DbMatchmakingQueue", () => {
           ]),
         );
 
-        expectPartyUpdate(spy, party, true, [mode]);
+        expectPartyUpdate(spy, party.id, [party.leader], true, [mode]);
       },
     );
 
@@ -185,7 +185,9 @@ describe("DbMatchmakingQueue", () => {
       await q.leaveQueue([p]);
 
       // then
-      expectPartyUpdate(spy, p, false, [MatchmakingMode.UNRANKED]);
+      expectPartyUpdate(spy, p.id, [p.leader], false, [
+        MatchmakingMode.UNRANKED,
+      ]);
     });
 
     it("should not update party and queue if nobody left from queue", async () => {
@@ -219,7 +221,9 @@ describe("DbMatchmakingQueue", () => {
 
       // then
       expect(spy).toHaveBeenCalledTimes(2);
-      expectPartyUpdate(spy, p2, false, [MatchmakingMode.UNRANKED]);
+      expectPartyUpdate(spy, p2.id, [p2.leader], false, [
+        MatchmakingMode.UNRANKED,
+      ]);
       expect(spy).toHaveBeenNthCalledWith(2, new QueueUpdatedEvent([]));
     });
 
