@@ -11,6 +11,7 @@ import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
 import { outerQueryNew } from "@/util/outerQuery";
 import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
 import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
+import { MetricsModule } from "./metrics/metrics.module";
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-se
         imports: [],
       },
     ]),
+    MetricsModule,
   ],
   controllers: [],
   providers: [

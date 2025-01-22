@@ -4,14 +4,21 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ReadyCheckService } from "@/matchmaker/service/ready-check.service";
 import { Room } from "@/matchmaker/entity/room";
+import { MetricsService } from "@/metrics/metrics.service";
+import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
+import { GameBalance } from "@/matchmaker/balance/game-balance";
+import { Logger } from "@nestjs/common";
 
 @EventsHandler(RoomCreatedEvent)
 export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
+  private logger = new Logger(RoomCreatedHandler.name);
+
   constructor(
     private readonly ebus: EventBus,
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
     private readonly readyCheckService: ReadyCheckService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async handle(event: RoomCreatedEvent) {
@@ -21,6 +28,17 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
       },
     });
     if (!room) return;
+    this.logger.log("Room created", room);
+    this.doMetrics(room, event.balance);
     await this.readyCheckService.startReadyCheck(room);
+  }
+
+  private doMetrics(room: Room, event: GameBalance) {
+    if (room.lobbyType !== MatchmakingMode.UNRANKED) return;
+    const diff = Math.abs(
+      event.left.reduce((a, b) => a + b.score, 0) -
+        event.right.reduce((a, b) => a + b.score, 0),
+    );
+    this.metrics.recordAvgDifference(room.lobbyType, diff);
   }
 }

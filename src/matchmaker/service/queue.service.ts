@@ -10,6 +10,7 @@ import { RoomService } from "@/matchmaker/service/room.service";
 import { RoomCreatedEvent } from "@/matchmaker/event/room-created.event";
 import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
 import { createDateComparator } from "@/util/date-comparator";
+import { MetricsService } from "@/metrics/metrics.service";
 
 @Injectable()
 export class QueueService {
@@ -46,10 +47,15 @@ export class QueueService {
     private readonly queue: DbMatchmakingQueue,
     private readonly roomService: RoomService,
     private readonly ebus: EventBus,
+    private readonly metrics: MetricsService,
   ) {}
 
   @Cron(CronExpression.EVERY_10_SECONDS)
   public async cycle() {
+    this.metrics.recordAvgDifference(
+      MatchmakingMode.UNRANKED,
+      Math.random() * 100,
+    );
     if (this.isCycleInProgress) {
       this.logger.log("Another cycle is in progress, skipping...");
       return;
@@ -57,12 +63,16 @@ export class QueueService {
     let balances: GameBalance[] = [];
     let error: Error | undefined;
     try {
+      const start = Date.now();
+      this.logger.log(`Cycle started at ${Date.now()}`);
       this.isCycleInProgress = true;
       const entries = await this.queue.entries();
       this.logger.log(`Acquire entries ${entries.length}`);
       balances = await this.iterateModes(entries);
       this.logger.log(`Found balances ${balances.length}`);
       await this.submitFoundGames(balances);
+      const timeTaken = Date.now() - start;
+      this.logger.log(`Full cycle took ${timeTaken} millis`);
     } catch (e) {
       error = e;
     } finally {
