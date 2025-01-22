@@ -122,13 +122,14 @@ export class DbMatchmakingQueue {
       .addCommonTableExpression(
         this.partyRepository
           .createQueryBuilder("p")
-          .select("p.id", "id")
+          .leftJoinAndSelect("p.players", "players")
+          .select("players.steam_id", "steam_id")
           .addSelect("unnest(p.queue_modes)", "lobby_type")
           .where("p.inQueue"),
         "modes",
       )
       .select("modes.lobby_type::party_queue_modes_enum", "lobby")
-      .addSelect("count(modes.id)::int", "count")
+      .addSelect("count(modes.steam_id)::int", "count")
       .from("modes", "modes")
       .groupBy("modes.lobby_type")
       .getRawMany();

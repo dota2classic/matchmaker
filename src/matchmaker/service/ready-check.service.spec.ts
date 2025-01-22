@@ -71,6 +71,23 @@ describe("ReadyCheckService", () => {
       ).resolves.toMatchObject({ inQueue: false });
     });
 
+    it("should not return to queue parties with multiple players if one declined", async () => {
+      // given
+      const u1 = testUser();
+      const u2 = testUser();
+      const p1 = await createParty(te, [MatchmakingMode.BOTS_2X2], [u1, u2]);
+      const room = await createRoom(te, MatchmakingMode.BOTS, [p1]);
+      await rs.startReadyCheck(room);
+
+      // when
+      await rs.submitReadyCheck(room.id, u2, ReadyState.DECLINE);
+
+      // then
+      await expect(
+        partyRepository.findOne({ where: { id: p1.id } }),
+      ).resolves.toMatchObject({ inQueue: false });
+    });
+
     it("should report declined players", async () => {
       // given
       const p1 = await createParty(

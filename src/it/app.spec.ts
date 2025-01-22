@@ -127,4 +127,60 @@ describe("AppController (e2e)", () => {
       });
     });
   });
+
+  // describe("party and ready check interaction", () => {
+  //   it("should stop ready check if player in party decline", async () => {
+  //     // given
+  //     const u1 = testUser();
+  //     const u2 = testUser();
+  //
+  //     const u3 = testUser();
+  //
+  //     const p1 = await createParty(te, [MatchmakingMode.SOLOMID], [u1], false);
+  //     const p2 = await createParty(te, [MatchmakingMode.SOLOMID], [u2], false);
+  //
+  //     const room = await createRoom(te, MatchmakingMode.SOLOMID, [p1], [p2]);
+  //     await te.service(ReadyCheckService).startReadyCheck(room);
+  //
+  //     const invite = await te
+  //       .repo(PartyInvite)
+  //       .save(new PartyInvite(p1.id, u1, u3));
+  //
+  //     // when
+  //     await te.service(PartyService).acceptInvite(invite.id);
+  //     await te
+  //       .service(ReadyCheckService)
+  //       .submitReadyCheck(room.id, u1, ReadyState.READY);
+  //     await te
+  //       .service(ReadyCheckService)
+  //       .submitReadyCheck(room.id, u2, ReadyState.READY);
+  //     await sleep(1000);
+  //
+  //     // Results:
+  //     // 1) Room should be left intact: u1 vs u2
+  //     // 2) Party p1 should now have u1 and u3
+  //
+  //     expect(te.ebusSpy).toReceiveCall(
+  //       new RoomReadyEvent(
+  //         room.id,
+  //         room.lobbyType,
+  //         [u1, u2].map((id, idx) => ({
+  //           playerId: new PlayerId(id),
+  //           partyId: idx == 0 ? p1.id : p2.id,
+  //           team: idx === 0 ? DotaTeam.RADIANT : DotaTeam.DIRE,
+  //         })),
+  //         Dota2Version.Dota_684,
+  //       ),
+  //     );
+  //
+  //     await expect(
+  //       te
+  //         .repo<Party>(Party)
+  //         .findOneOrFail({ where: { id: p1.id } })
+  //         .then((it) => it.players),
+  //     ).resolves.toPartiallyContain({
+  //       steamId: u3,
+  //     });
+  //   })
+  // });
 });

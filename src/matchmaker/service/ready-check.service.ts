@@ -89,8 +89,12 @@ export class ReadyCheckService {
 
     plr.readyState = state;
     await this.playerInRoomRepository.save(plr);
-
     await this.readyStateUpdate(room);
+
+    if (state === ReadyState.DECLINE) {
+      // End ready check
+      await this.onExplicitDecline(room);
+    }
 
     await this.checkIsRoomReady(room);
   }
@@ -179,8 +183,10 @@ export class ReadyCheckService {
     }
 
     // Return good piggies to their queues
-    const goodPartyIds = new Set<string>();
-    accepted.forEach((plr) => goodPartyIds.add(plr.partyId));
+    const goodPartyIds = new Set<string>(
+      room.players.flatMap((it) => it.partyId),
+    );
+    notAccepted.forEach((plr) => goodPartyIds.delete(plr.partyId));
     await this.partyService.returnToQueues(Array.from(goodPartyIds));
 
     await this.ebus.publish(
@@ -189,6 +195,15 @@ export class ReadyCheckService {
         accepted.concat(notAccepted).map((it) => it.steamId),
       ),
     );
+  }
+
+  private async onExplicitDecline(room: Room) {
+    const pendingPlayers = room.players.filter(
+      (it) => it.readyState === ReadyState.PENDING,
+    );
+
+    pendingPlayers.forEach((plr) => (plr.readyState = ReadyState.READY));
+    await this.playerInRoomRepository.save(pendingPlayers);
   }
 
   private async readyStateUpdate(room: Room) {
