@@ -46,7 +46,7 @@ export class QueueService {
     private readonly ebus: EventBus,
   ) {}
 
-  @Cron(CronExpression.EVERY_5_SECONDS)
+  @Cron(CronExpression.EVERY_10_SECONDS)
   public async cycle() {
     if (await this.queue.isLocked()) {
       this.logger.log("Queue is locked, skipping cycle");
