@@ -82,12 +82,12 @@ export class DbMatchmakingQueue {
     _entries: Party[],
     clearEnterQueueTime: boolean = true,
   ): Promise<void> {
-    // if (!bypassLock && await this.isLocked()) return;
-
-    let entries = _entries.filter((entry) => entry.inQueue);
+    const entries = _entries.filter((entry) => entry.inQueue);
     entries.forEach((entry) => {
       entry.inQueue = false;
-      if (clearEnterQueueTime) entry.enterQueueAt = null;
+      if (clearEnterQueueTime) {
+        entry.enterQueueAt = null;
+      }
     });
     if (entries.length === 0) return;
 

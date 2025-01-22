@@ -187,7 +187,7 @@ export class PartyService {
 
     await this.datasource.transaction(async (em) => {
       // Find existing membership
-      let partyMembership: PlayerInParty | null =
+      const partyMembership: PlayerInParty | null =
         await em.findOne<PlayerInParty>(PlayerInParty, {
           where: {
             steamId: steamId,
@@ -225,5 +225,14 @@ export class PartyService {
         await this.ebus.publish(partyMembership.party.snapshotEvent());
       }
     });
+  }
+
+  async resetQueueTimer(partyIds: string[]) {
+    await this.partyRepository.update(
+      {
+        id: In(partyIds),
+      },
+      { enterQueueAt: null },
+    );
   }
 }

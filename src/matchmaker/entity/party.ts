@@ -68,4 +68,8 @@ export class Party {
       this.enterQueueAt ? this.enterQueueAt.toISOString() : undefined,
     );
   }
+
+  get queueTime(): number {
+    return this.enterQueueAt ? Date.now() - this.enterQueueAt.getTime() : -1;
+  }
 }

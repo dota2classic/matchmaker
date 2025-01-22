@@ -6,7 +6,6 @@ import { ConfigService } from "@nestjs/config";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { QueueMeta } from "@/matchmaker/entity/queue-meta";
 import { Repository } from "typeorm";
-import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { EventBus } from "@nestjs/cqrs";
 import { inspect } from "util";
 
@@ -29,13 +28,13 @@ async function bootstrap() {
   });
 
   const repo: Repository<QueueMeta> = app.get(getRepositoryToken(QueueMeta));
-  await repo.upsert(
-    {
-      isLocked: false,
-      version: Dota2Version.Dota_684,
-    },
-    ["version"],
-  );
+  // await repo.upsert(
+  //   {
+  //     isLocked: false,
+  //     version: Dota2Version.Dota_684,
+  //   },
+  //   ["version"],
+  // );
 
   await app.listen();
 }

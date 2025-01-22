@@ -220,7 +220,7 @@ export class ReadyCheckService {
   }
 
   private async onSucceededRoom(room: Room) {
-    // We are done here! just emit event
+    // Emit our event
     this.ebus.publish(
       new RoomReadyEvent(
         room.id,
@@ -231,6 +231,11 @@ export class ReadyCheckService {
         ),
         Dota2Version.Dota_684,
       ),
+    );
+
+    // Update parties: set enterQueueTime to null
+    await this.partyService.resetQueueTimer(
+      room.players.map((it) => it.partyId),
     );
   }
 

@@ -31,8 +31,8 @@ import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-se
           entities: Entities,
           synchronize: false,
           dropSchema: false,
-          // migrations: ["src/database/migrations/*-migration.ts"],
-          // migrationsRun: true,
+          migrations: ["dist/src/database/migrations/*.*"],
+          migrationsRun: true,
 
           ssl: false,
         };
