@@ -3,12 +3,10 @@ import configuration from "@/config/configuration";
 import { DataSource } from "typeorm";
 import Entities from "@/matchmaker/entity";
 
-
-
-const configService = new ConfigService(configuration('prod.config.yaml'));
+const configService = new ConfigService(configuration("config.yaml"));
 
 const AppDataSource = new DataSource({
-  type: 'postgres',
+  type: "postgres",
 
   port: 5432,
   host: configService.get("postgres.host"),
@@ -16,7 +14,7 @@ const AppDataSource = new DataSource({
   password: configService.get("postgres.password"),
   synchronize: false,
   entities: Entities,
-  migrations: ['src/database/migrations/*-migration.ts'],
+  migrations: ["src/database/migrations/*-migration.ts"],
   migrationsRun: false,
   logging: true,
 });

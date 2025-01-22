@@ -30,8 +30,13 @@ export class Party {
   @Column({ default: 0, type: "float" })
   score: number = 0;
 
-  @Column({ name: "waiting_score", default: 0 })
-  waitingScore: number = 0;
+  @Column({
+    name: "enter_queue_time",
+    nullable: true,
+    default: null,
+    type: "timestamptz",
+  })
+  enterQueueAt: Date;
 
   @Column({
     type: "enum",
