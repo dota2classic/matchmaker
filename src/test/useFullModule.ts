@@ -13,8 +13,6 @@ import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { Room } from "@/matchmaker/entity/room";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { PartyUpdatedEvent } from "@/gateway/events/party/party-updated.event";
-import { QueueMeta } from "@/matchmaker/entity/queue-meta";
-import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { Constructor, EventBus } from "@nestjs/cqrs";
 import { DotaTeam } from "@/gateway/shared-types/dota-team";
 import { INestMicroservice } from "@nestjs/common";
@@ -237,18 +235,6 @@ export function expectPartyUpdate(
   );
 }
 
-export async function setQueueLocked(te: TestEnvironment, locked: boolean) {
-  const repo: Repository<QueueMeta> = te.module.get(
-    getRepositoryToken(QueueMeta),
-  );
-  await repo.upsert(
-    {
-      version: Dota2Version.Dota_684,
-      isLocked: locked,
-    },
-    ["version"],
-  );
-}
 export function testUser(): string {
   return Math.round(Math.random() * 1000000).toString();
 }

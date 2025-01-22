@@ -14,7 +14,7 @@ const AppDataSource = new DataSource({
   password: configService.get("postgres.password"),
   synchronize: false,
   entities: Entities,
-  migrations: ["src/database/migrations/*-migration.ts"],
+  migrations: ["src/database/migrations/*.*"],
   migrationsRun: false,
   logging: true,
 });

@@ -2,7 +2,6 @@ import {
   createParty,
   createRoom,
   expectPartyUpdate,
-  setQueueLocked,
   testUser,
   useFullModule,
 } from "@/test/useFullModule";
@@ -44,7 +43,6 @@ describe("DbMatchmakingQueue", () => {
     q = te.module.get(DbMatchmakingQueue);
     ebus = te.module.get(EventBus);
     spy = jest.spyOn(ebus, "publish");
-    await setQueueLocked(te, false);
   });
 
   afterEach(async () => {
@@ -225,32 +223,6 @@ describe("DbMatchmakingQueue", () => {
         MatchmakingMode.UNRANKED,
       ]);
       expect(spy).toHaveBeenNthCalledWith(2, new QueueUpdatedEvent([]));
-    });
-
-    it("should not update if queue is locked", async () => {
-      // given
-      await setQueueLocked(te, true);
-      const p1 = await createParty(
-        te,
-        [MatchmakingMode.UNRANKED],
-        [testUser()],
-      );
-
-      // when
-      await q.leaveQueue([p1]);
-
-      // then
-      expect(spy).toHaveBeenCalledTimes(0);
-    });
-  });
-
-  describe("locks", () => {
-    it("should lock", async () => {
-      await q.setLocked(true);
-      await expect(q.isLocked()).resolves.toEqual(true);
-
-      await q.setLocked(false);
-      await expect(q.isLocked()).resolves.toEqual(false);
     });
   });
 

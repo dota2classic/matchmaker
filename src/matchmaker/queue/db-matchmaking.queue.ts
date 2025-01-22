@@ -2,8 +2,6 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Any, DataSource, In, Repository } from "typeorm";
-import { QueueMeta } from "@/matchmaker/entity/queue-meta";
-import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { EventBus } from "@nestjs/cqrs";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
@@ -20,8 +18,6 @@ export class DbMatchmakingQueue {
   constructor(
     @InjectRepository(Party)
     private readonly partyRepository: Repository<Party>,
-    @InjectRepository(QueueMeta)
-    private readonly queueMetaRepository: Repository<QueueMeta>,
     @InjectRepository(PlayerInRoom)
     private readonly playerInRoomRepository: Repository<PlayerInRoom>,
     private readonly ebus: EventBus,
@@ -71,13 +67,6 @@ export class DbMatchmakingQueue {
       .getMany();
   }
 
-  // Queue is locked by default until is locked manually
-  async isLocked(): Promise<boolean> {
-    return this.queueMetaRepository.exists({
-      where: { version: Dota2Version.Dota_684, isLocked: true },
-    });
-  }
-
   async leaveQueue(
     _entries: Party[],
     clearEnterQueueTime: boolean = true,
@@ -110,18 +99,6 @@ export class DbMatchmakingQueue {
     await this.partyUpdated(updatedParties);
     await this.queueUpdated();
   }
-
-  async setLocked(locked: boolean): Promise<void> {
-    this.logger.log(`Set table lock to`, { locked });
-    await this.queueMetaRepository.upsert(
-      {
-        version: Dota2Version.Dota_684,
-        isLocked: locked,
-      },
-      ["version"],
-    );
-  }
-
   // Events
 
   private async queueUpdated() {

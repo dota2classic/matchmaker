@@ -14,6 +14,7 @@ import { createDateComparator } from "@/util/date-comparator";
 @Injectable()
 export class QueueService {
   private logger = new Logger(QueueService.name);
+  private isCycleInProgress = false;
 
   private modeBalancingMap: BalanceConfig[] = [
     {
@@ -49,15 +50,14 @@ export class QueueService {
 
   @Cron(CronExpression.EVERY_10_SECONDS)
   public async cycle() {
-    if (await this.queue.isLocked()) {
-      this.logger.log("Queue is locked, skipping cycle");
+    if (this.isCycleInProgress) {
+      this.logger.log("Another cycle is in progress, skipping...");
       return;
     }
     let balances: GameBalance[] = [];
     let error: Error | undefined;
     try {
-      await this.queue.setLocked(true);
-      this.logger.log("Locked queue for processing");
+      this.isCycleInProgress = true;
       const entries = await this.queue.entries();
       this.logger.log(`Acquire entries ${entries.length}`);
       balances = await this.iterateModes(entries);
@@ -66,7 +66,7 @@ export class QueueService {
     } catch (e) {
       error = e;
     } finally {
-      await this.queue.setLocked(false);
+      this.isCycleInProgress = false;
     }
 
     if (error) {
