@@ -173,11 +173,10 @@ export class QueueService {
   }
 
   private getPartyWaitingScore(party: Party) {
-    let score = party.enterQueueAt
+    // 10 seconds = 1 waiting score
+    return party.enterQueueAt
       ? (Date.now() - party.enterQueueAt.getTime()) / 1000 / 10
       : 0;
-    console.log("Party waiting score", party.enterQueueAt, score / 1000 / 10);
-    return score; // 10 seconds = 1 waiting score
   }
 
   private balanceFunction = (left: Party[], right: Party[]) => {

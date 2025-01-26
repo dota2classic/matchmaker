@@ -40,6 +40,7 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
       event.left.reduce((a, b) => a + b.score, 0) -
         event.right.reduce((a, b) => a + b.score, 0),
     );
+    this.logger.log("Room balance mmr difference: ", { diff });
     this.metrics.recordAvgDifference(room.lobbyType, diff);
   }
 }
