@@ -36,11 +36,14 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
   private doMetrics(room: Room, event: GameBalance) {
     if (!this.metrics) return;
     if (room.lobbyType !== MatchmakingMode.UNRANKED) return;
-    const diff = Math.abs(
-      event.left.reduce((a, b) => a + b.score, 0) -
-        event.right.reduce((a, b) => a + b.score, 0),
-    );
-    this.logger.log("Room balance mmr difference: ", { diff });
+    const leftMMR = event.left.reduce((a, b) => a + b.score, 0);
+    const rightMMR = event.right.reduce((a, b) => a + b.score, 0);
+    const diff = Math.abs(leftMMR - rightMMR);
+    this.logger.log("Room balance mmr difference: ", {
+      diff,
+      leftMMR,
+      rightMMR,
+    });
     this.metrics.recordAvgDifference(room.lobbyType, diff);
   }
 }
