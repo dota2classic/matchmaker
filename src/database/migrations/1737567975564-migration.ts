@@ -5,6 +5,16 @@ export class Migration1737567975564 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
+      `CREATE TYPE "public"."party_queue_modes_enum" AS ENUM('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."player_in_room_ready_state_enum" AS ENUM('0', '1', '2', '3')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."player_in_room_team_enum" AS ENUM('2', '3')`,
+    );
+
+    await queryRunner.query(
       `CREATE TABLE "player_in_party" ("steam_id" character varying NOT NULL, "party_id" uuid NOT NULL, "leader" boolean NOT NULL DEFAULT false, CONSTRAINT "PK_525e4ed572fe057f9a637a399b8" PRIMARY KEY ("steam_id"))`,
     );
     await queryRunner.query(
@@ -46,6 +56,11 @@ export class Migration1737567975564 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DROP TYPE "public"."player_in_room_team_enum"`);
+    await queryRunner.query(
+      `DROP TYPE "public"."player_in_room_ready_state_enum"`,
+    );
+    await queryRunner.query(`DROP TYPE "public"."party_queue_modes_enum"`);
     await queryRunner.query(
       `ALTER TABLE "player_in_room" DROP CONSTRAINT "FK_a37b9e3201354878cee8e4fbbd0"`,
     );
