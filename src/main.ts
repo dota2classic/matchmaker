@@ -23,6 +23,10 @@ async function bootstrap() {
     },
   });
 
+  // app.get(EventBus).subscribe(e => {
+  //   console.log(e)
+  // })
+
   await app.listen();
 }
 bootstrap();

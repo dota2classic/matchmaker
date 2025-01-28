@@ -86,11 +86,10 @@ export class PartyService {
       })
       .getMany();
 
-    await this.partyInviteRepository.remove(expiredInvites);
-
     expiredInvites.map((invite) =>
       this.ebus.publish(new PartyInviteExpiredEvent(invite.id, invite.invited)),
     );
+    await this.partyInviteRepository.remove(expiredInvites);
   }
 
   async returnToQueues(goodPartyIds: string[]) {
