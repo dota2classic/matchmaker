@@ -36,7 +36,7 @@ export function findBestMatchBy(
   target: number,
   func: (left: Team, right: Team) => number,
   timeLimitation: number,
-  acceptableThreshold: number | undefined = undefined,
+  predicate: (left: Team, right: Team, score: number) => boolean = () => true,
 ): BalancePair | undefined {
   const timeStarted = performance.now();
 
@@ -46,17 +46,16 @@ export function findBestMatchBy(
   const leftG = subsetSum(pool, target);
   for (const left of leftG) {
     const subpool = pool.filter(
-      (t) =>
-        left.findIndex((leftParty) => leftParty.id === t.id) === -1,
+      (t) => left.findIndex((leftParty) => leftParty.id === t.id) === -1,
     );
 
     const rightG = subsetSum(subpool, target);
 
     for (const right of rightG) {
       const score = func(left, right);
-      if (acceptableThreshold && score < acceptableThreshold) {
-        return { left, right };
-      }
+      const passesPredicate = predicate(left, right, score);
+
+      if (!passesPredicate) continue;
 
       if (score < bestScore) {
         bestScore = score;

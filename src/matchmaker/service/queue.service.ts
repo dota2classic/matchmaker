@@ -10,6 +10,7 @@ import { RoomService } from "@/matchmaker/service/room.service";
 import { RoomCreatedEvent } from "@/matchmaker/event/room-created.event";
 import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
 import { createDateComparator } from "@/util/date-comparator";
+import { totalScore } from "@/util/totalScore";
 
 @Injectable()
 export class QueueService {
@@ -21,7 +22,13 @@ export class QueueService {
       mode: MatchmakingMode.UNRANKED,
       priority: 0,
       findGames: (entries) =>
-        this.findBalancedGame(MatchmakingMode.UNRANKED, entries, 5, 5000),
+        this.findBalancedGame(
+          MatchmakingMode.UNRANKED,
+          entries,
+          5,
+          5000,
+          8_000,
+        ),
     },
     {
       mode: MatchmakingMode.SOLOMID,
@@ -38,7 +45,7 @@ export class QueueService {
       mode: MatchmakingMode.BOTS_2X2,
       priority: 10,
       findGames: (entries) =>
-        this.findBalancedGame(MatchmakingMode.BOTS_2X2, entries, 2, 5000),
+        this.findBalancedGame(MatchmakingMode.BOTS_2X2, entries, 2, 5000, 10e6),
     },
   ];
 
@@ -143,6 +150,7 @@ export class QueueService {
     pool: Party[],
     teamSize: number = 5,
     timeLimit: number = 5000,
+    maxScoreDifference: number = 9000,
   ): Promise<GameBalance | undefined> {
     // Let's first filter off this case
     const totalPlayersInQ = pool.reduce((a, b) => a + b.players.length, 0);
@@ -155,6 +163,8 @@ export class QueueService {
       teamSize,
       this.balanceFunction,
       timeLimit, // Max 5 seconds to find a game
+      (left, right) =>
+        Math.abs(totalScore(left) - totalScore(right)) <= maxScoreDifference,
     );
     if (bestMatch === undefined) {
       return undefined;

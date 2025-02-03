@@ -169,6 +169,7 @@ export async function createParty(
   players: string[],
   inQueue: boolean = false,
   leader: string = players[0],
+  score: number = 0,
 ): Promise<Party> {
   const pr: Repository<Party> = te.module.get(getRepositoryToken(Party));
 
@@ -176,6 +177,7 @@ export async function createParty(
   p.queueModes = modes;
   p.inQueue = inQueue;
   p.enterQueueAt = inQueue ? new Date() : null;
+  p.score = score;
   p = await pr.save(p);
 
   const pip = te.repo(PlayerInParty);
@@ -219,9 +221,12 @@ export async function createParties(
   te: TestEnvironment,
   cnt: number,
   modes: MatchmakingMode[],
+  inQueue: boolean = false,
 ): Promise<Party[]> {
   return Promise.all(
-    Array.from({ length: cnt }, () => createParty(te, modes, [testUser()])),
+    Array.from({ length: cnt }, () =>
+      createParty(te, modes, [testUser()], inQueue),
+    ),
   );
 }
 

@@ -1,9 +1,15 @@
-import { createParty, testUser, useFullModule } from "@/test/useFullModule";
+import {
+  createParties,
+  createParty,
+  testUser,
+  useFullModule,
+} from "@/test/useFullModule";
 import { QueueService } from "@/matchmaker/service/queue.service";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { RoomCreatedEvent } from "@/matchmaker/event/room-created.event";
 import { DeepPartial } from "typeorm";
 import { GameBalance } from "@/matchmaker/balance/game-balance";
+import { Party } from "@/matchmaker/entity/party";
 
 describe("QueueService", () => {
   const te = useFullModule();
@@ -42,5 +48,37 @@ describe("QueueService", () => {
         } satisfies DeepPartial<GameBalance>),
       } satisfies DeepPartial<RoomCreatedEvent>),
     );
+  });
+
+  it("should not find a game where score difference too big", async () => {
+    // given
+    console.log(
+      "QUEUESERIZE:",
+      te.repo(Party).count({ where: { inQueue: true } }),
+    );
+    const boss = testUser();
+    const noobParties = await createParties(
+      te,
+      9,
+      [MatchmakingMode.UNRANKED],
+      true,
+    );
+    const bossParty = await createParty(
+      te,
+      [MatchmakingMode.UNRANKED],
+      [boss],
+      true,
+      boss,
+      10000,
+    );
+
+    // when
+    await qs.cycle();
+
+    // then
+
+    await expect(
+      te.repo(Party).find({ where: { inQueue: true } }),
+    ).resolves.toHaveLength(10);
   });
 });
