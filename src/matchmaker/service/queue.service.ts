@@ -175,8 +175,8 @@ export class QueueService {
     this.logger.log(`Found balanced game`, {
       diff: this.balanceFunction(left, right),
       mode,
-      left: left.reduce((a, b) => a + b.score, 0) / 5,
-      right: right.reduce((a, b) => a + b.score, 0) / 5,
+      left: left.reduce((a, b) => a + b.score, 0),
+      right: right.reduce((a, b) => a + b.score, 0),
     });
 
     return new GameBalance(mode, left, right);

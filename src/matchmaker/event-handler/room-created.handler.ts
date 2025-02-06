@@ -20,7 +20,6 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
     private readonly readyCheckService: ReadyCheckService,
     @Optional() private readonly metrics?: MetricsService,
   ) {}
-
   async handle(event: RoomCreatedEvent) {
     const room = await this.roomRepository.findOne({
       where: {
@@ -28,12 +27,26 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
       },
     });
     if (!room) return;
-    this.logger.log("Room created", room);
     this.doMetrics(room, event.balance);
     await this.readyCheckService.startReadyCheck(room);
   }
 
   private doMetrics(room: Room, event: GameBalance) {
+    this.logger.log("Room created", {
+      id: room.id,
+      lobby: room.lobbyType,
+      totalLeftScore: event.left.reduce((a, b) => a + b.score, 0),
+      totalRightScore: event.right.reduce((a, b) => a + b.score, 0),
+      left: event.left.map((party) => ({
+        score: party.score,
+        players: party.players.map((it) => it.steamId),
+      })),
+      right: event.right.map((party) => ({
+        score: party.score,
+        players: party.players.map((it) => it.steamId),
+      })),
+    });
+
     if (!this.metrics) return;
     if (room.lobbyType !== MatchmakingMode.UNRANKED) return;
     const leftMMR = event.left.reduce((a, b) => a + b.score, 0);

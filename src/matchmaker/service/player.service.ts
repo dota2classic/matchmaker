@@ -68,7 +68,11 @@ export class PlayerService {
         if (mmr.banStatus.isBanned) {
           throw new Error("Can't queue when banned");
         }
-        return this.getPlayerScore(mmr.mmr, mmr.recentWinrate, mmr.gamesPlayed);
+        return PlayerService.getPlayerScore(
+          mmr.mmr,
+          mmr.recentWinrate,
+          mmr.gamesPlayed,
+        );
       }),
     );
 
@@ -78,7 +82,7 @@ export class PlayerService {
     return party;
   }
 
-  private getPlayerScore = (
+  public static getPlayerScore = (
     mmr: number,
     wrLast20Games: number,
     gamesPlayed: number,
