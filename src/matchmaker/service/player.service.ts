@@ -84,7 +84,7 @@ export class PlayerService {
 
   public static getPlayerScore = (
     mmr: number,
-    wrLast20Games: number,
+    recentWinrate: number,
     gamesPlayed: number,
   ) => {
     // B2 * ((MIN(D2, 90) + 10) / 100)* (C2 + 0.5)
@@ -101,6 +101,10 @@ export class PlayerService {
       Math.min(500, Math.max(10, gamesPlayed)),
     );
 
-    return mmr * educationFactor * experienceFactor;
+    // Winrate factor: if you are losing recently, u are worse that ur mmr
+    const BASELINE_WINRATE = 0.5;
+    const winrateFactor = recentWinrate + BASELINE_WINRATE;
+
+    return mmr * winrateFactor * educationFactor * experienceFactor;
   };
 }
