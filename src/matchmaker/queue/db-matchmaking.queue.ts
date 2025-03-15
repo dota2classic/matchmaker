@@ -48,7 +48,7 @@ export class DbMatchmakingQueue {
     party = await this.ds.transaction((em) => {
       party.inQueue = true;
       party.queueModes = modes;
-      if (restartEnterTime) {
+      if (restartEnterTime || !party.enterQueueAt) {
         party.enterQueueAt = new Date();
       }
       return em.save(party);
