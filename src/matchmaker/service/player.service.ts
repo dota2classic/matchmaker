@@ -10,6 +10,8 @@ import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { PlayerId } from "@/gateway/shared-types/player-id";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
+import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
+import { canQueueMode } from "@/gateway/shared-types/match-access-level";
 
 @Injectable()
 export class PlayerService {
@@ -45,7 +47,7 @@ export class PlayerService {
     };
   }
 
-  async preparePartyForQueue(party: Party) {
+  async preparePartyForQueue(party: Party, modes: MatchmakingMode[]) {
     const plrs = party.players.map((it) => it.steamId);
 
     const resolvedScores = await Promise.all(
@@ -68,6 +70,13 @@ export class PlayerService {
         if (mmr.banStatus.isBanned) {
           throw new Error("Can't queue when banned");
         }
+
+        if (
+          modes.findIndex((mode) => !canQueueMode(mmr.accessLevel, mode)) !== -1
+        ) {
+          throw new Error("Can't queue this mode");
+        }
+
         return PlayerService.getPlayerScore(
           mmr.mmr,
           mmr.recentWinrate,

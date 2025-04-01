@@ -31,7 +31,7 @@ export class DbMatchmakingQueue {
     restartEnterTime: boolean = true,
   ): Promise<void> {
     try {
-      await this.playerService.preparePartyForQueue(party);
+      await this.playerService.preparePartyForQueue(party, modes);
     } catch (e) {
       this.logger.error("Prevented bad party from entering queue", e);
       return;

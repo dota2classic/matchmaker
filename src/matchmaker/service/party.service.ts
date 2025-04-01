@@ -154,7 +154,11 @@ export class PartyService {
 
     // Then, join new party
     await this.datasource.transaction(async (em) => {
-      let partyMembership = new PlayerInParty(invite.invited, party.id, false);
+      const partyMembership = new PlayerInParty(
+        invite.invited,
+        party.id,
+        false,
+      );
       await em.save(PlayerInParty, partyMembership);
 
       const newParty = await em.findOneOrFail<Party>(Party, {
