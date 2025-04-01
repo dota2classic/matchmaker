@@ -23,6 +23,7 @@ import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { createTestingUtils } from "@/test/party-queue-test.utils";
 import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
 import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
+import { MatchAccessLevel } from "@/gateway/shared-types/match-access-level";
 import SpyInstance = jest.SpyInstance;
 
 describe("DbMatchmakingQueue", () => {
@@ -124,6 +125,29 @@ describe("DbMatchmakingQueue", () => {
       },
     );
 
+    it("should not enter mode if player resolves to be insufficient access level", async () => {
+      // given
+      const party = await createParty(te, [], [testUser()]);
+      te.queryMocks[GetPlayerInfoQuery.name].mockReturnValueOnce(
+        new GetPlayerInfoQueryResult(
+          new PlayerId(party.leader),
+          Dota2Version.Dota_684,
+          1234,
+          0.5,
+          0.5,
+          50,
+          BanStatus.NOT_BANNED,
+          MatchAccessLevel.EDUCATION,
+        ),
+      );
+
+      // when
+      await q.enterQueue(party, [MatchmakingMode.UNRANKED]);
+
+      // then
+      await expectPartyInQueue(party.id, false);
+    });
+
     it("should not enter queue if player resolves to be banned", async () => {
       // given
       const party = await createParty(te, [], [testUser()]);
@@ -136,6 +160,7 @@ describe("DbMatchmakingQueue", () => {
           0.5,
           50,
           BanStatus.PERMA_BAN,
+          MatchAccessLevel.HUMAN_GAMES,
         ),
       );
 

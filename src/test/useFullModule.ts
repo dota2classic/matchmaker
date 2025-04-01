@@ -27,6 +27,7 @@ import {
   GetPlayerInfoQueryResult,
 } from "@/gateway/queries/GetPlayerInfo/get-player-info-query.result";
 import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
+import { MatchAccessLevel } from "@/gateway/shared-types/match-access-level";
 import SpyInstance = jest.SpyInstance;
 
 export interface TestEnvironment {
@@ -83,6 +84,7 @@ export function useFullModule(): TestEnvironment {
           2,
           50,
           BanStatus.NOT_BANNED,
+          MatchAccessLevel.HUMAN_GAMES,
         );
       }),
       [GetSessionByUserQuery.name]: jest.fn((q: GetSessionByUserQuery) => {
