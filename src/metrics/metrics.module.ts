@@ -2,6 +2,7 @@ import { Global, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
   makeGaugeProvider,
+  makeSummaryProvider,
   PrometheusModule,
   PrometheusUseFactoryOptions,
 } from "@willsoto/nestjs-prometheus";
@@ -31,11 +32,12 @@ import { MetricsService } from "@/metrics/metrics.service";
       labelNames: ["mode"],
       aggregator: "average",
     }),
-    makeGaugeProvider({
+    makeSummaryProvider({
       name: "d2c_queue_time",
       help: "123",
       labelNames: ["mode"],
       aggregator: "average",
+      percentiles: [0.01, 0.1, 0.9, 0.99],
     }),
   ],
   exports: [MetricsService],

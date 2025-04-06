@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import * as client from "prom-client";
-import { Gauge, PrometheusContentType } from "prom-client";
+import { Gauge, PrometheusContentType, Summary } from "prom-client";
 import { InjectMetric } from "@willsoto/nestjs-prometheus";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
@@ -9,7 +9,7 @@ import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 export class MetricsService {
   constructor(
     @InjectMetric("d2c_avg_diff") private readonly df: Gauge<string>,
-    @InjectMetric("d2c_queue_time") private readonly queueTime: Gauge<string>,
+    @InjectMetric("d2c_queue_time") private readonly queueTime: Summary<string>,
     private readonly pushgateway: client.Pushgateway<PrometheusContentType>,
   ) {}
 
@@ -18,12 +18,12 @@ export class MetricsService {
   }
 
   public recordQueueTime(lobbyType: MatchmakingMode, timeInQueue: number) {
-    this.queueTime.labels(lobbyType.toString()).set(timeInQueue);
+    this.queueTime.labels(lobbyType.toString()).observe(timeInQueue);
   }
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_5_SECONDS)
   private async pushMetrics() {
-    await this.pushgateway.pushAdd({
+    await this.pushgateway.push({
       jobName: "game-coordinator",
     });
   }

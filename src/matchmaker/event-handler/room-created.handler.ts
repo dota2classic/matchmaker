@@ -48,6 +48,13 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
     });
 
     if (!this.metrics) return;
+
+    event.left.concat(event.right).forEach((party) => {
+      if (!party.enterQueueAt) return;
+      const timeInQueue = Date.now() - party.enterQueueAt.getTime();
+      this.metrics?.recordQueueTime(room.lobbyType, timeInQueue);
+    });
+
     if (room.lobbyType !== MatchmakingMode.UNRANKED) return;
     const leftMMR = event.left.reduce((a, b) => a + b.score, 0);
     const rightMMR = event.right.reduce((a, b) => a + b.score, 0);
@@ -58,11 +65,5 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
       rightMMR,
     });
     this.metrics?.recordAvgDifference(room.lobbyType, diff);
-
-    event.left.concat(event.right).forEach((party) => {
-      if (!party.enterQueueAt) return;
-      const timeInQueue = Date.now() - party.enterQueueAt.getTime();
-      this.metrics?.recordQueueTime(room.lobbyType, timeInQueue);
-    });
   }
 }
