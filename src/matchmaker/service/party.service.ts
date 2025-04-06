@@ -178,7 +178,7 @@ export class PartyService {
     });
 
     // And then, leave queue
-    await this.queue.leaveQueue([invite.party]);
+    await this.queue.leaveQueue([invite.party], true);
   }
 
   public async leaveCurrentParty(steamId: string) {
@@ -186,7 +186,7 @@ export class PartyService {
     if (!party) return;
 
     // Leave party from queue
-    await this.queue.leaveQueue([party]);
+    await this.queue.leaveQueue([party], true);
 
     await this.datasource.transaction(async (em) => {
       // Find existing membership

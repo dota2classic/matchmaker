@@ -205,7 +205,7 @@ describe("DbMatchmakingQueue", () => {
       );
 
       // when
-      await q.leaveQueue([p]);
+      await q.leaveQueue([p], true);
 
       // then
       expectPartyUpdate(spy, p.id, [p.leader], false, [
@@ -223,7 +223,7 @@ describe("DbMatchmakingQueue", () => {
       );
 
       // when
-      await q.leaveQueue([p]);
+      await q.leaveQueue([p], true);
 
       // then
       expect(spy).toHaveBeenCalledTimes(0);
@@ -240,7 +240,7 @@ describe("DbMatchmakingQueue", () => {
       );
 
       // when
-      await q.leaveQueue([p1, p2]);
+      await q.leaveQueue([p1, p2], true);
 
       // then
       expect(spy).toHaveBeenCalledTimes(2);

@@ -39,6 +39,13 @@ import { MetricsService } from "@/metrics/metrics.service";
       aggregator: "average",
       percentiles: [0.01, 0.1, 0.9, 0.99],
     }),
+    makeSummaryProvider({
+      name: "d2c_queue_leave_time",
+      help: "123",
+      labelNames: ["mode"],
+      aggregator: "average",
+      percentiles: [0.01, 0.1, 0.9, 0.99],
+    }),
   ],
   exports: [MetricsService],
 })

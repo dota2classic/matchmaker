@@ -10,6 +10,8 @@ export class MetricsService {
   constructor(
     @InjectMetric("d2c_avg_diff") private readonly df: Gauge<string>,
     @InjectMetric("d2c_queue_time") private readonly queueTime: Summary<string>,
+    @InjectMetric("d2c_queue_leave_time")
+    private readonly queueLeaveTime: Summary<string>,
     private readonly pushgateway: client.Pushgateway<PrometheusContentType>,
   ) {}
 
@@ -19,6 +21,11 @@ export class MetricsService {
 
   public recordQueueTime(lobbyType: MatchmakingMode, timeInQueue: number) {
     this.queueTime.labels(lobbyType.toString()).observe(timeInQueue);
+  }
+
+  public recordLeaveQueue(mode: MatchmakingMode, duration: number) {
+    console.log("Record leave queue time", duration);
+    this.queueLeaveTime.labels(mode.toString()).observe(duration);
   }
 
   @Cron(CronExpression.EVERY_5_SECONDS)
