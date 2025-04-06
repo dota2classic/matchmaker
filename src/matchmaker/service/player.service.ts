@@ -98,7 +98,7 @@ export class PlayerService {
   ) => {
     // B2 * ((MIN(D2, 90) + 10) / 100)* (C2 + 0.5)
 
-    const EDUCATION_THRESHOLD = 10;
+    const EDUCATION_THRESHOLD = 3;
 
     // Education factor: the less games you have, the less score you will end up with
     const educationFactor =
