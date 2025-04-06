@@ -57,6 +57,12 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
       leftMMR,
       rightMMR,
     });
-    this.metrics.recordAvgDifference(room.lobbyType, diff);
+    this.metrics?.recordAvgDifference(room.lobbyType, diff);
+
+    event.left.concat(event.right).forEach((party) => {
+      if (!party.enterQueueAt) return;
+      const timeInQueue = Date.now() - party.enterQueueAt.getTime();
+      this.metrics?.recordQueueTime(room.lobbyType, timeInQueue);
+    });
   }
 }
