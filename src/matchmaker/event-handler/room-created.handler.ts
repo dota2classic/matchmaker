@@ -49,13 +49,22 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
 
     if (!this.metrics) return;
 
+    this.recordQueueTime(event);
+
+    if (room.lobbyType === MatchmakingMode.UNRANKED) {
+      this.recordAvgDiff(event, room);
+    }
+  }
+
+  private recordQueueTime(event: GameBalance) {
     event.left.concat(event.right).forEach((party) => {
       if (!party.enterQueueAt) return;
       const timeInQueue = Date.now() - party.enterQueueAt.getTime();
-      this.metrics?.recordQueueTime(room.lobbyType, timeInQueue);
+      this.metrics?.recordQueueTime(event.mode, timeInQueue);
     });
+  }
 
-    if (room.lobbyType !== MatchmakingMode.UNRANKED) return;
+  private recordAvgDiff(event: GameBalance, room: Room) {
     const leftMMR = event.left.reduce((a, b) => a + b.score, 0);
     const rightMMR = event.right.reduce((a, b) => a + b.score, 0);
     const diff = Math.abs(leftMMR - rightMMR);
