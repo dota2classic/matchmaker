@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Any, DataSource, In, Repository } from "typeorm";
@@ -24,7 +24,7 @@ export class DbMatchmakingQueue {
     private readonly ebus: EventBus,
     private readonly ds: DataSource,
     private readonly playerService: PlayerService,
-    private readonly metrics: MetricsService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   async enterQueue(
@@ -111,7 +111,7 @@ export class DbMatchmakingQueue {
     await this.queueUpdated();
 
     preparedMetrics.forEach(({  duration, mode }) => {
-      this.metrics.recordLeaveQueue(mode, duration)
+      this.metrics?.recordLeaveQueue(mode, duration)
     });
   }
   // Events

@@ -121,17 +121,6 @@ export function useFullModule(): TestEnvironment {
           GetSessionByUserQuery,
           te.queryMocks[GetSessionByUserQuery.name],
         ),
-        // {
-        //   provide: MetricsService,
-        //   useExisting: {
-        //     recordAvgDifference: jest.fn(),
-        //   } satisfies DeepPartial<MetricsService>
-        //   // useExisting() {
-        //   //   return {
-        //   //     recordAvgDifference: jest.fn(),
-        //   //   } satisfies DeepPartial<MetricsService>;
-        //   // },
-        // },
       ],
     }).compile();
 
