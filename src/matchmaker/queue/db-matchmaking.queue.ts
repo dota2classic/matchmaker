@@ -77,15 +77,13 @@ export class DbMatchmakingQueue {
     const preparedMetrics: { mode: MatchmakingMode; duration: number }[] = [];
     entries.forEach((entry) => {
       entry.inQueue = false;
-      if (clearEnterQueueTime) {
-        if (entry.enterQueueAt) {
-          preparedMetrics.push(
-            ...entry.queueModes.map((mode) => ({
-              mode,
-              duration: Date.now() - entry.enterQueueAt!.getTime(),
-            })),
-          );
-        }
+      if (clearEnterQueueTime && entry.enterQueueAt) {
+        preparedMetrics.push(
+          ...entry.queueModes.map((mode) => ({
+            mode,
+            duration: Date.now() - entry.enterQueueAt!.getTime(),
+          })),
+        )
         entry.enterQueueAt = null;
       }
     });

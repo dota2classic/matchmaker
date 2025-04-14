@@ -47,6 +47,12 @@ export class QueueService {
       findGames: (entries) =>
         this.findBalancedGame(MatchmakingMode.BOTS_2X2, entries, 2, 5000, 10e6),
     },
+    {
+      mode: MatchmakingMode.HIGHROOM,
+      priority: 5,
+      findGames: (entries) =>
+        this.findBalancedGame(MatchmakingMode.HIGHROOM, entries, 5, 5000, 10e6),
+    },
   ];
 
   constructor(
