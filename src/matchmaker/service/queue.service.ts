@@ -27,7 +27,7 @@ export class QueueService {
           entries,
           5,
           5000,
-          8_000,
+          6_000,
         ),
     },
     {
