@@ -61,7 +61,7 @@ export class QueueService {
     private readonly ebus: EventBus,
   ) {}
 
-  @Cron(CronExpression.EVERY_10_SECONDS)
+  @Cron(CronExpression.EVERY_MINUTE)
   public async cycle() {
     if (this.isCycleInProgress) {
       this.logger.log("Another cycle is in progress, skipping...");
