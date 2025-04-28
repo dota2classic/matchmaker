@@ -250,8 +250,8 @@ export class QueueService {
   ): Promise<GameBalance | undefined> {
     if (pool.length === 0) return undefined;
 
-    const entry = pool[0];
+    const entries = pool.slice(0, 5);
 
-    return new GameBalance(mode, [entry], []);
+    return new GameBalance(mode, entries, []);
   }
 }
