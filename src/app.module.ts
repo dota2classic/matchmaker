@@ -4,7 +4,6 @@ import { MatchmakerModule } from "./matchmaker/matchmaker.module";
 import configuration from "./config/configuration";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm";
-import Entities from "@/matchmaker/entity";
 import { CqrsModule } from "@nestjs/cqrs";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
@@ -12,6 +11,7 @@ import { outerQueryNew } from "@/util/outerQuery";
 import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
 import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
 import { MetricsModule } from "./metrics/metrics.module";
+import { getTypeormConfig } from "@/config/typeorm.config";
 
 @Module({
   imports: [
@@ -23,19 +23,11 @@ import { MetricsModule } from "./metrics/metrics.module";
     TypeOrmModule.forRootAsync({
       useFactory(config: ConfigService): TypeOrmModuleOptions {
         return {
+          ...getTypeormConfig(config),
           type: "postgres",
-          database: "postgres",
-          host: config.get("postgres.host"),
-          port: 5432,
-          username: config.get("postgres.username"),
-          password: config.get("postgres.password"),
-          entities: Entities,
-          synchronize: false,
-          dropSchema: false,
           migrations: ["dist/src/database/migrations/*.*"],
           migrationsRun: true,
-
-          ssl: false,
+          logging: undefined,
         };
       },
       imports: [],

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
 import { findBestMatchBy } from "../balance/perms";
 import { GameBalance } from "../balance/game-balance";
 import { BalanceConfig } from "../balance/balance-config";
@@ -11,9 +11,12 @@ import { RoomCreatedEvent } from "@/matchmaker/event/room-created.event";
 import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
 import { createDateComparator } from "@/util/date-comparator";
 import { totalScore } from "@/util/totalScore";
+import { QueueSettings } from "@/matchmaker/entity/queue-settings";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 
 @Injectable()
-export class QueueService {
+export class QueueService implements OnApplicationBootstrap {
   private logger = new Logger(QueueService.name);
   private isCycleInProgress = false;
 
@@ -59,23 +62,44 @@ export class QueueService {
     private readonly queue: DbMatchmakingQueue,
     private readonly roomService: RoomService,
     private readonly ebus: EventBus,
+    @InjectRepository(QueueSettings)
+    private readonly queueSettingsRepository: Repository<QueueSettings>,
   ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_SECOND)
   public async cycle() {
     if (this.isCycleInProgress) {
       this.logger.log("Another cycle is in progress, skipping...");
       return;
     }
-    let balances: GameBalance[] = [];
+
+    const setting = (
+      await this.queueSettingsRepository
+        .find({ where: { inProgress: false } })
+        .then((it) => it.filter((qs) => qs.shouldRunMatchmaking))
+    )[0];
+
+    if (!setting) return;
+
     let error: Error | undefined;
     try {
       const start = Date.now();
       this.logger.log(`Cycle started at ${Date.now()}`);
       this.isCycleInProgress = true;
+
+      // lock mode
+      await this.queueSettingsRepository.update(
+        { mode: setting.mode },
+        { inProgress: true },
+      );
       const entries = await this.queue.entries();
       this.logger.log(`Acquire entries ${entries.length}`);
-      balances = await this.iterateModes(entries);
+      const algo = this.modeBalancingMap.find((t) => t.mode === setting.mode);
+      if (!algo) {
+        throw "No balance algorithm specified for mode " + setting.mode;
+      }
+
+      const balances = await this.findGamesForConfig(algo, entries);
       this.logger.log(`Found balances ${balances.length}`);
       await this.submitFoundGames(balances);
       const timeTaken = Date.now() - start;
@@ -84,6 +108,10 @@ export class QueueService {
       error = e;
     } finally {
       this.isCycleInProgress = false;
+      await this.queueSettingsRepository.update(
+        { mode: setting.mode },
+        { inProgress: false, lastCheckTimestamp: new Date() },
+      );
     }
 
     if (error) {
@@ -103,6 +131,23 @@ export class QueueService {
         this.logger.warn("There was an issue creating room", e);
       }
     }
+  }
+
+  public async findGamesForConfig(
+    balanceConfig: BalanceConfig,
+    _pool: Party[],
+  ): Promise<GameBalance[]> {
+    const totalPool = [..._pool];
+
+    const taskPool = totalPool.filter((t) =>
+      t.queueModes.includes(balanceConfig.mode),
+    );
+    this.logger.log(`Player to balance for mode`, {
+      lobby_type: balanceConfig.mode,
+      party_count: taskPool.length,
+      player_count: taskPool.reduce((a, b) => a + b.players.length, 0),
+    });
+    return this.findAllGames(taskPool, balanceConfig);
   }
 
   public async iterateModes(_pool: Party[]): Promise<GameBalance[]> {
@@ -253,5 +298,9 @@ export class QueueService {
     const entries = pool.slice(0, 5);
 
     return new GameBalance(mode, entries, []);
+  }
+
+  async onApplicationBootstrap() {
+    await this.queueSettingsRepository.update({}, { inProgress: false });
   }
 }

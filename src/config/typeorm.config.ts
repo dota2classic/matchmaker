@@ -2,21 +2,29 @@ import { ConfigService } from "@nestjs/config";
 import configuration from "@/config/configuration";
 import { DataSource } from "typeorm";
 import Entities from "@/matchmaker/entity";
+import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
 
-const configService = new ConfigService(configuration("prod.config.yaml"));
+export const getTypeormConfig = (
+  cs: ConfigService,
+): PostgresConnectionOptions => {
+  return {
+    type: "postgres",
+    database: "postgres",
 
-const AppDataSource = new DataSource({
-  type: "postgres",
+    port: cs.get<number>("postgres.port") || 5432,
+    host: cs.get("postgres.host"),
+    username: cs.get("postgres.username"),
+    password: cs.get("postgres.password"),
+    synchronize: false,
+    entities: Entities,
+    migrations: ["src/database/migrations/*.*"],
+    migrationsRun: false,
+    logging: true,
+  };
+};
 
-  port: 5432,
-  host: configService.get("postgres.host"),
-  username: configService.get("postgres.username"),
-  password: configService.get("postgres.password"),
-  synchronize: false,
-  entities: Entities,
-  migrations: ["src/database/migrations/*.*"],
-  migrationsRun: false,
-  logging: true,
-});
+const AppDataSource = new DataSource(
+  getTypeormConfig(new ConfigService(configuration("config.yaml"))),
+);
 
 export default AppDataSource;
