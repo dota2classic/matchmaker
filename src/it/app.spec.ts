@@ -60,7 +60,7 @@ describe("AppController (e2e)", () => {
     await sleep(500);
 
     //  Simulate cycle call
-    await te.module.get(QueueService).cycle();
+    await te.module.get(QueueService).cycle(MatchmakingMode.SOLOMID);
 
     expect(te.ebusSpy).toReceiveCall(
       expect.objectContaining({
