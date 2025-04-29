@@ -67,7 +67,7 @@ export class QueueService implements OnApplicationBootstrap {
   ) {}
 
   @Cron(CronExpression.EVERY_SECOND)
-  public async cycle() {
+  public async cycle(mode?: MatchmakingMode) {
     if (this.isCycleInProgress) {
       this.logger.log("Another cycle is in progress, skipping...");
       return;
@@ -75,7 +75,7 @@ export class QueueService implements OnApplicationBootstrap {
 
     const setting = (
       await this.queueSettingsRepository
-        .find({ where: { inProgress: false } })
+        .find({ where: { inProgress: false, mode } })
         .then((it) => it.filter((qs) => qs.shouldRunMatchmaking))
     )[0];
 

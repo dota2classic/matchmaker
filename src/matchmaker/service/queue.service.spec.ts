@@ -35,7 +35,7 @@ describe("QueueService", () => {
     );
 
     // when
-    await qs.cycle();
+    await qs.cycle(MatchmakingMode.SOLOMID);
 
     // then
     expect(te.ebusSpy).toReceiveCall(
@@ -54,7 +54,7 @@ describe("QueueService", () => {
     // given
     console.log(
       "QUEUESERIZE:",
-      te.repo(Party).count({ where: { inQueue: true } }),
+      await te.repo(Party).count({ where: { inQueue: true } }),
     );
     const boss = testUser();
     const noobParties = await createParties(

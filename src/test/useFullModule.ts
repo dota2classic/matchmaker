@@ -28,6 +28,7 @@ import {
 } from "@/gateway/queries/GetPlayerInfo/get-player-info-query.result";
 import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
 import { MatchAccessLevel } from "@/gateway/shared-types/match-access-level";
+import { QueueSettings } from "@/matchmaker/entity/queue-settings";
 import SpyInstance = jest.SpyInstance;
 
 export interface TestEnvironment {
@@ -105,8 +106,8 @@ export function useFullModule(): TestEnvironment {
           username: te.containers.pg.getUsername(),
           password: te.containers.pg.getPassword(),
           entities: Entities,
-          synchronize: true,
-          dropSchema: false,
+          migrations: ["dist/src/database/migrations/*.*"],
+          migrationsRun: true,
           ssl: false,
         }),
         TypeOrmModule.forFeature(Entities),
@@ -141,6 +142,10 @@ export function useFullModule(): TestEnvironment {
     te.repo = (con) => te.module.get(getRepositoryToken(con));
     te.ebus = te.module.get(EventBus);
     te.ebusSpy = jest.spyOn(te.ebus, "publish");
+
+    await te
+      .repo<QueueSettings>(QueueSettings)
+      .update({}, { lastCheckTimestamp: new Date("2011-10-05T14:48:00.000Z") });
 
     // Mocks:
   });
