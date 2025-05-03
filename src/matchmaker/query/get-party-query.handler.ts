@@ -21,6 +21,7 @@ export class GetPartyHandler
       p.players.map((plr) => plr.steamId),
       p.queueModes,
       p.inQueue,
+      p.enterQueueAt?.toISOString(),
     );
   }
 }
