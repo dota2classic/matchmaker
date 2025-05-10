@@ -98,12 +98,11 @@ export class PlayerService {
   ) => {
     // B2 * ((MIN(D2, 90) + 10) / 100)* (C2 + 0.5)
 
-    const EDUCATION_THRESHOLD = 3;
-
+    // const EDUCATION_THRESHOLD = 3;
     // Education factor: the less games you have, the less score you will end up with
-    const educationFactor =
-      (Math.min(gamesPlayed, EDUCATION_THRESHOLD - 1) + 1) /
-      EDUCATION_THRESHOLD;
+    // const educationFactor =
+    //   (Math.min(gamesPlayed, EDUCATION_THRESHOLD - 1) + 1) /
+    //   EDUCATION_THRESHOLD;
 
     // Experience factor: if you have a lot of games, its diminishing returns, so we use log
     const experienceFactor = Math.log10(
@@ -114,6 +113,6 @@ export class PlayerService {
     const BASELINE_WINRATE = 0.5;
     const winrateFactor = recentWinrate + BASELINE_WINRATE;
 
-    return mmr * winrateFactor * educationFactor * experienceFactor;
+    return mmr * winrateFactor * experienceFactor;
   };
 }
