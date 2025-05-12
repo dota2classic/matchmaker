@@ -6,7 +6,7 @@ import {
 import { getRepositoryToken, TypeOrmModule } from "@nestjs/typeorm";
 import Entities from "@/matchmaker/entity";
 import { MatchmakerModule } from "@/matchmaker/matchmaker.module";
-import { DeepPartial, ObjectLiteral, Repository } from "typeorm";
+import { DeepPartial, MoreThan, ObjectLiteral, Repository } from "typeorm";
 import { Party } from "@/matchmaker/entity/party";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
@@ -143,11 +143,12 @@ export function useFullModule(): TestEnvironment {
     te.ebus = te.module.get(EventBus);
     te.ebusSpy = jest.spyOn(te.ebus, "publish");
 
-    await te
-      .repo<QueueSettings>(QueueSettings)
-      .update("mode is not null", {
+    await te.repo<QueueSettings>(QueueSettings).update(
+      { checkInterval: MoreThan(-1) },
+      {
         lastCheckTimestamp: new Date("2011-10-05T14:48:00.000Z"),
-      });
+      },
+    );
 
     // Mocks:
   });

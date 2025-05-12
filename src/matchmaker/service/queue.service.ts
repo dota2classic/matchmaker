@@ -301,8 +301,11 @@ export class QueueService implements OnApplicationBootstrap {
   }
 
   async onApplicationBootstrap() {
-    await this.queueSettingsRepository.update("in_progress = true", {
-      inProgress: false,
-    });
+    await this.queueSettingsRepository.update(
+      { inProgress: true },
+      {
+        inProgress: false,
+      },
+    );
   }
 }
