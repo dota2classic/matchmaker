@@ -143,9 +143,12 @@ export function useFullModule(): TestEnvironment {
     te.ebus = te.module.get(EventBus);
     te.ebusSpy = jest.spyOn(te.ebus, "publish");
 
-    await te
-      .repo<QueueSettings>(QueueSettings)
-      .update({}, { lastCheckTimestamp: new Date("2011-10-05T14:48:00.000Z") });
+    const qs = await te.repo<QueueSettings>(QueueSettings).find();
+
+    qs.forEach(
+      (f) => (f.lastCheckTimestamp = new Date("2011-10-05T14:48:00.000Z")),
+    );
+    await te.repo(QueueSettings).save(qs);
 
     // Mocks:
   });
