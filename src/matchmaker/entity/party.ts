@@ -47,6 +47,15 @@ export class Party {
   })
   queueModes: MatchmakingMode[];
 
+  @Column({
+    enum: MatchmakingMode,
+    array: true,
+    default: [],
+    name: "dodge_list",
+    type: "text",
+  })
+  dodgeList: string[];
+
   @Column({ name: "in_queue", default: false })
   inQueue: boolean;
 

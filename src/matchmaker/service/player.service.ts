@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import { ResolvedPlayer } from "@/matchmaker/model/resolved-player";
 import { Party } from "@/matchmaker/entity/party";
 import { QueryBus } from "@nestjs/cqrs";
 import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
@@ -20,32 +19,6 @@ export class PlayerService {
     @InjectRepository(Party)
     private readonly partyRepository: Repository<Party>,
   ) {}
-
-  public async resolvePartyScore(party: Party) {
-    const steamIds = party.players.map((plr) => plr.steamId);
-    // const isInGame = await this.qbus.execute<
-    //   GetSessionByUserQuery,
-    //   GetSessionByUserQueryResult
-    // >(new GetSessionByUserQuery(partyMember));
-    //
-    // if (isInGame.serverUrl) {
-    //   throw new QueueException("Can't queue while in game!");
-    // }
-    //
-    // const mmr = await this.qbus.execute<
-    //   GetPlayerInfoQuery,
-    //   GetPlayerInfoQueryResult
-    // >(new GetPlayerInfoQuery(partyMember, version));
-  }
-
-  public async resolvePlayer(steamId: string): Promise<ResolvedPlayer> {
-    // todo implement queries
-
-    return {
-      steamId,
-      balanceScore: Math.random() * 10000,
-    };
-  }
 
   async preparePartyForQueue(party: Party, modes: MatchmakingMode[]) {
     const plrs = party.players.map((it) => it.steamId);
@@ -77,15 +50,26 @@ export class PlayerService {
           throw new Error("Can't queue this mode");
         }
 
-        return PlayerService.getPlayerScore(
+        const score = PlayerService.getPlayerScore(
           mmr.mmr,
           mmr.recentWinrate,
           mmr.gamesPlayed,
         );
+
+        return {
+          score,
+          dodgeList: mmr.dodgeList,
+        };
       }),
     );
 
-    party.score = resolvedScores.reduce((a, b) => a + b, 0);
+    const dodgeList: string[] = resolvedScores.reduce(
+      (a, b) => a.concat(b.dodgeList),
+      [] as string[],
+    );
+
+    party.score = resolvedScores.reduce((a, b) => a + b.score, 0);
+    party.dodgeList = dodgeList;
     await this.partyRepository.save(party);
 
     return party;

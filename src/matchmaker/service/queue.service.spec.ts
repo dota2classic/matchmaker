@@ -81,4 +81,42 @@ describe("QueueService", () => {
       te.repo(Party).find({ where: { inQueue: true } }),
     ).resolves.toHaveLength(10);
   });
+
+  it("should not find a game where dodged player is on the same team", async () => {
+    // given
+    const u1 = testUser();
+
+    const left4 = await createParty(
+      te,
+      [MatchmakingMode.UNRANKED],
+      [testUser(), testUser(), testUser(), testUser()],
+      true,
+    );
+
+    const left1 = await createParty(
+      te,
+      [MatchmakingMode.UNRANKED],
+      [u1],
+      true,
+      u1,
+      0,
+      [left4.leader],
+    );
+
+    const right = await createParty(
+      te,
+      [MatchmakingMode.UNRANKED],
+      [testUser(), testUser(), testUser(), testUser(), testUser()],
+      true,
+    );
+
+    // when
+    await qs.cycle();
+
+    // then
+
+    await expect(
+      te.repo(Party).find({ where: { inQueue: true } }),
+    ).resolves.toHaveLength(10);
+  });
 });

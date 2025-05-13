@@ -86,6 +86,7 @@ export function useFullModule(): TestEnvironment {
           50,
           BanStatus.NOT_BANNED,
           MatchAccessLevel.HUMAN_GAMES,
+          [],
         );
       }),
       [GetSessionByUserQuery.name]: jest.fn((q: GetSessionByUserQuery) => {
@@ -169,6 +170,7 @@ export async function createParty(
   inQueue: boolean = false,
   leader: string = players[0],
   score: number = 0,
+  dodgeList: string[] = [],
 ): Promise<Party> {
   const pr: Repository<Party> = te.module.get(getRepositoryToken(Party));
 
@@ -177,6 +179,7 @@ export async function createParty(
   p.inQueue = inQueue;
   p.enterQueueAt = inQueue ? new Date() : null;
   p.score = score;
+  p.dodgeList = dodgeList;
   p = await pr.save(p);
 
   const pip = te.repo(PlayerInParty);

@@ -1,7 +1,8 @@
 import { performance } from "perf_hooks";
 import { Party } from "@/matchmaker/entity/party";
+import { BalancePredicate } from "@/util/predicates";
 
-type Team = Party[];
+export type Team = Party[];
 
 export interface BalancePair {
   left: Team;
@@ -36,7 +37,7 @@ export function findBestMatchBy(
   target: number,
   func: (left: Team, right: Team) => number,
   timeLimitation: number,
-  predicate: (left: Team, right: Team, score: number) => boolean = () => true,
+  predicates: BalancePredicate[] = [],
 ): BalancePair | undefined {
   const timeStarted = performance.now();
 
@@ -53,9 +54,18 @@ export function findBestMatchBy(
 
     for (const right of rightG) {
       const score = func(left, right);
-      const passesPredicate = predicate(left, right, score);
 
-      if (!passesPredicate) continue;
+      let predicatesPassed = true;
+      for (const predicate of predicates) {
+        if (!predicate(left, right)) {
+          predicatesPassed = false;
+          break;
+        }
+      }
+
+      if (!predicatesPassed) {
+        continue;
+      }
 
       if (score < bestScore) {
         bestScore = score;

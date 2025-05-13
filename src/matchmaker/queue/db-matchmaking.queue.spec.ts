@@ -138,6 +138,7 @@ describe("DbMatchmakingQueue", () => {
           50,
           BanStatus.NOT_BANNED,
           MatchAccessLevel.EDUCATION,
+          [],
         ),
       );
 
@@ -161,6 +162,7 @@ describe("DbMatchmakingQueue", () => {
           50,
           BanStatus.PERMA_BAN,
           MatchAccessLevel.HUMAN_GAMES,
+          [],
         ),
       );
 

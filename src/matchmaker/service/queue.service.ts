@@ -10,10 +10,14 @@ import { RoomService } from "@/matchmaker/service/room.service";
 import { RoomCreatedEvent } from "@/matchmaker/event/room-created.event";
 import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
 import { createDateComparator } from "@/util/date-comparator";
-import { totalScore } from "@/util/totalScore";
 import { QueueSettings } from "@/matchmaker/entity/queue-settings";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import {
+  DodgeListPredicate,
+  MakeMaxScoreDifferencePredicate,
+} from "@/util/predicates";
+import { takeWhileNotDodged } from "@/util/take-while-not-dodged";
 
 @Injectable()
 export class QueueService implements OnApplicationBootstrap {
@@ -214,8 +218,7 @@ export class QueueService implements OnApplicationBootstrap {
       teamSize,
       this.balanceFunction,
       timeLimit, // Max 5 seconds to find a game
-      (left, right) =>
-        Math.abs(totalScore(left) - totalScore(right)) <= maxScoreDifference,
+      [MakeMaxScoreDifferencePredicate(maxScoreDifference), DodgeListPredicate],
     );
     if (bestMatch === undefined) {
       return undefined;
@@ -295,7 +298,7 @@ export class QueueService implements OnApplicationBootstrap {
   ): Promise<GameBalance | undefined> {
     if (pool.length === 0) return undefined;
 
-    const entries = pool.slice(0, 5);
+    const entries = takeWhileNotDodged(pool, 5);
 
     return new GameBalance(mode, entries, []);
   }
