@@ -7,9 +7,10 @@ import {
 import { QueueService } from "@/matchmaker/service/queue.service";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { RoomCreatedEvent } from "@/matchmaker/event/room-created.event";
-import { DeepPartial } from "typeorm";
+import { DeepPartial, In } from "typeorm";
 import { GameBalance } from "@/matchmaker/balance/game-balance";
 import { Party } from "@/matchmaker/entity/party";
+import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 
 describe("QueueService", () => {
   const te = useFullModule();
@@ -88,14 +89,14 @@ describe("QueueService", () => {
 
     const left4 = await createParty(
       te,
-      [MatchmakingMode.HIGHROOM],
+      [MatchmakingMode.UNRANKED],
       [testUser(), testUser(), testUser(), testUser()],
       true,
     );
 
     const left1 = await createParty(
       te,
-      [MatchmakingMode.HIGHROOM],
+      [MatchmakingMode.UNRANKED],
       [u1],
       true,
       u1,
@@ -116,7 +117,15 @@ describe("QueueService", () => {
     // then
 
     await expect(
-      te.repo(Party).find({ where: { inQueue: true } }),
-    ).resolves.toHaveLength(10);
+      te.repo<PlayerInRoom>(PlayerInRoom).find({
+        where: {
+          steamId: In(
+            [left1, right, left4].flatMap((it) =>
+              it.players.map((plr) => plr.steamId),
+            ),
+          ),
+        },
+      }),
+    ).resolves.toHaveLength(0);
   });
 });
