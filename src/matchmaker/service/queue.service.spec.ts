@@ -88,14 +88,14 @@ describe("QueueService", () => {
 
     const left4 = await createParty(
       te,
-      [MatchmakingMode.UNRANKED],
+      [MatchmakingMode.HIGHROOM],
       [testUser(), testUser(), testUser(), testUser()],
       true,
     );
 
     const left1 = await createParty(
       te,
-      [MatchmakingMode.UNRANKED],
+      [MatchmakingMode.HIGHROOM],
       [u1],
       true,
       u1,

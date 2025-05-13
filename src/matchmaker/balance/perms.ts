@@ -57,7 +57,7 @@ export function findBestMatchBy(
 
       let predicatesPassed = true;
       for (const predicate of predicates) {
-        if (!predicate(left, right)) {
+        if (!predicate(left, right, score)) {
           predicatesPassed = false;
           break;
         }
