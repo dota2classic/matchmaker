@@ -66,7 +66,6 @@ export class PartyService {
     const trash = await this.partyRepository
       .createQueryBuilder("p")
       .leftJoinAndSelect("p.players", "players")
-      .where({ inQueue: true })
       .having("count(players) = 0")
       .groupBy("p.id, players.steam_id")
       .getMany();
