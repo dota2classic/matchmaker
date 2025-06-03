@@ -89,9 +89,7 @@ export class PlayerService {
     //   EDUCATION_THRESHOLD;
 
     // Experience factor: if you have a lot of games, its diminishing returns, so we use log
-    const experienceFactor = Math.log10(
-      Math.min(500, Math.max(10, gamesPlayed)),
-    );
+    const experienceFactor = 1 + 1 / (1 + Math.exp(-(gamesPlayed / 10))) / 5;
 
     // Winrate factor: if you are losing recently, u are worse that ur mmr
     const BASELINE_WINRATE = 0.5;
