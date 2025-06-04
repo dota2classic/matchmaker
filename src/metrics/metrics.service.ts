@@ -15,6 +15,8 @@ export class MetricsService {
     private readonly pushgateway: client.Pushgateway<PrometheusContentType>,
   ) {}
 
+  public recordQueues(mode: MatchmakingMode, cnt: number) {}
+
   public recordAvgDifference(mode: MatchmakingMode, diff: number) {
     this.df.labels(mode.toString()).set(diff);
   }

@@ -32,6 +32,11 @@ import { MetricsService } from "@/metrics/metrics.service";
       labelNames: ["mode"],
       aggregator: "average",
     }),
+    makeGaugeProvider({
+      name: "d2c_queue_length",
+      help: "123",
+      labelNames: ["mode"],
+    }),
     makeSummaryProvider({
       name: "d2c_queue_time",
       help: "123",
