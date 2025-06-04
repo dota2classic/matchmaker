@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import * as client from "prom-client";
 import { Counter, Gauge, PrometheusContentType, Summary } from "prom-client";
 import { InjectMetric } from "@willsoto/nestjs-prometheus";
-import { Cron, CronExpression } from "@nestjs/schedule";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 
 @Injectable()
@@ -44,17 +43,5 @@ export class MetricsService {
   public recordLeaveQueue(mode: MatchmakingMode, duration: number) {
     console.log("Record leave queue time", duration);
     this.queueLeaveTime.labels(mode.toString()).observe(duration);
-  }
-
-  @Cron(CronExpression.EVERY_5_SECONDS)
-  private async pushMetrics() {
-    await this.pushgateway.push({
-      jobName: "game-coordinator",
-    });
-  }
-
-  @Cron(CronExpression.EVERY_WEEKEND)
-  private clearMetrics() {
-    this.df.reset();
   }
 }
