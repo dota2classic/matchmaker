@@ -55,8 +55,14 @@ export class DbMatchmakingQueue {
       }
       return em.save(party);
     });
+
     await this.partyUpdated(party);
     await this.queueUpdated();
+
+    // Metrics
+    party.queueModes.forEach((mode) =>
+      this.metrics?.playerEnterQueue(mode, party.size),
+    );
   }
 
   async entries(): Promise<Party[]> {
@@ -71,7 +77,7 @@ export class DbMatchmakingQueue {
 
   async leaveQueue(
     _entries: Party[],
-    clearEnterQueueTime: boolean
+    clearEnterQueueTime: boolean,
   ): Promise<void> {
     const entries = _entries.filter((entry) => entry.inQueue);
     const preparedMetrics: { mode: MatchmakingMode; duration: number }[] = [];
@@ -83,7 +89,7 @@ export class DbMatchmakingQueue {
             mode,
             duration: Date.now() - entry.enterQueueAt!.getTime(),
           })),
-        )
+        );
         entry.enterQueueAt = null;
       }
     });
@@ -108,8 +114,15 @@ export class DbMatchmakingQueue {
     await this.partyUpdated(updatedParties);
     await this.queueUpdated();
 
-    preparedMetrics.forEach(({  duration, mode }) => {
-      this.metrics?.recordLeaveQueue(mode, duration)
+    // Metrics
+    entries.forEach((entry) => {
+      entry.queueModes.forEach((mode) =>
+        this.metrics?.playerLeftQueue(mode, entry.size),
+      );
+    });
+
+    preparedMetrics.forEach(({ duration, mode }) => {
+      this.metrics?.recordLeaveQueue(mode, duration);
     });
   }
   // Events
@@ -137,6 +150,10 @@ export class DbMatchmakingQueue {
         res.map((raw) => ({ count: raw.count, lobby: Number(raw.lobby) })),
       ),
     );
+    // Record metrics
+    res.forEach((res) => {
+      this.metrics?.recordQueues(Number(res.lobby), res.count);
+    });
   }
 
   private async partyUpdated(party: Party | Party[]) {

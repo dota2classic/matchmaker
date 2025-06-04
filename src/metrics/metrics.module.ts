@@ -1,6 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
+  makeCounterProvider,
   makeGaugeProvider,
   makeSummaryProvider,
   PrometheusModule,
@@ -34,6 +35,16 @@ import { MetricsService } from "@/metrics/metrics.service";
     }),
     makeGaugeProvider({
       name: "d2c_queue_length",
+      help: "123",
+      labelNames: ["mode"],
+    }),
+    makeCounterProvider({
+      name: "d2c_queue_entered_total",
+      help: "123",
+      labelNames: ["mode"],
+    }),
+    makeCounterProvider({
+      name: "d2c_queue_left_total",
       help: "123",
       labelNames: ["mode"],
     }),
