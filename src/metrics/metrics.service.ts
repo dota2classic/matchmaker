@@ -3,6 +3,7 @@ import * as client from "prom-client";
 import { Counter, Gauge, PrometheusContentType, Summary } from "prom-client";
 import { InjectMetric } from "@willsoto/nestjs-prometheus";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
+import { utcHour } from "@/util/time";
 
 @Injectable()
 export class MetricsService {
@@ -37,11 +38,10 @@ export class MetricsService {
   }
 
   public recordQueueTime(lobbyType: MatchmakingMode, timeInQueue: number) {
-    this.queueTime.labels(lobbyType.toString()).observe(timeInQueue);
+    this.queueTime.labels(lobbyType.toString(), utcHour()).observe(timeInQueue);
   }
 
   public recordLeaveQueue(mode: MatchmakingMode, duration: number) {
-    console.log("Record leave queue time", duration);
-    this.queueLeaveTime.labels(mode.toString()).observe(duration);
+    this.queueLeaveTime.labels(mode.toString(), utcHour()).observe(duration);
   }
 }

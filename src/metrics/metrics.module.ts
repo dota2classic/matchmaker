@@ -51,15 +51,13 @@ import { MetricsService } from "@/metrics/metrics.service";
     makeSummaryProvider({
       name: "d2c_queue_time",
       help: "123",
-      labelNames: ["mode"],
-      aggregator: "average",
+      labelNames: ["mode", "hour"],
       percentiles: [0.01, 0.1, 0.5, 0.9, 0.99],
     }),
     makeSummaryProvider({
       name: "d2c_queue_leave_time",
       help: "123",
-      labelNames: ["mode"],
-      aggregator: "average",
+      labelNames: ["mode", "hour"],
       percentiles: [0.01, 0.1, 0.5, 0.9, 0.99],
     }),
   ],
