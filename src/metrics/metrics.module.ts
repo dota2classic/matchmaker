@@ -1,28 +1,17 @@
 import { Global, Module } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import {
   makeCounterProvider,
   makeGaugeProvider,
   makeSummaryProvider,
   PrometheusModule,
-  PrometheusUseFactoryOptions,
 } from "@willsoto/nestjs-prometheus";
 import { MetricsService } from "@/metrics/metrics.service";
 
 @Global()
 @Module({
   imports: [
-    PrometheusModule.registerAsync({
-      useFactory(config: ConfigService): PrometheusUseFactoryOptions {
-        return {
-          pushgateway: {
-            url: config.get("pushgateway_url")!,
-          },
-        };
-      },
+    PrometheusModule.register({
       global: true,
-      imports: [],
-      inject: [ConfigService],
     }),
   ],
   providers: [
