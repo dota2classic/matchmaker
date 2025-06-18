@@ -21,6 +21,8 @@ import { PartyInviteAcceptedHandler } from "@/matchmaker/event-handler/party-inv
 import { PartyLeaveRequestedHandler } from "@/matchmaker/event-handler/party-leave-requested.handler";
 import { ReadyStateReceivedHandler } from "@/matchmaker/event-handler/ready-state-received.handler";
 import { MatchmakerApiController } from "@/matchmaker/matchmaker-api.controller";
+import { Configuration, PlayerApi } from "@/generated-api/gameserver";
+import { ConfigService } from "@nestjs/config";
 
 const EventHandlers = [
   PlayerEnterQueueRequestedHandler,
@@ -38,6 +40,18 @@ const QueryHandlers = [
   GetQueueStateHandler,
 ];
 
+const Apis = [
+  {
+    provide: PlayerApi,
+    useFactory: (config: ConfigService) => {
+      return new PlayerApi(
+        new Configuration({ basePath: config.get("gameserverUrl") }),
+      );
+    },
+    inject: [ConfigService],
+  },
+];
+
 @Module({
   controllers: [MatchmakerController, MatchmakerApiController],
   imports: [TypeOrmModule.forFeature(Entities), CqrsModule],
@@ -51,6 +65,7 @@ const QueryHandlers = [
     DbMatchmakingQueue,
     ...EventHandlers,
     ...QueryHandlers,
+    ...Apis,
   ],
 })
 export class MatchmakerModule {}

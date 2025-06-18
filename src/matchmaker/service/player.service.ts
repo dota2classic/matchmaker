@@ -1,16 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { QueryBus } from "@nestjs/cqrs";
-import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
-import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
-import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
-import { GetPlayerInfoQueryResult } from "@/gateway/queries/GetPlayerInfo/get-player-info-query.result";
-import { Dota2Version } from "@/gateway/shared-types/dota2version";
-import { PlayerId } from "@/gateway/shared-types/player-id";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { canQueueMode } from "@/gateway/shared-types/match-access-level";
+import { PlayerApi } from "@/generated-api/gameserver";
 
 @Injectable()
 export class PlayerService {
@@ -18,6 +13,7 @@ export class PlayerService {
     private readonly qbus: QueryBus,
     @InjectRepository(Party)
     private readonly partyRepository: Repository<Party>,
+    private readonly playerApi: PlayerApi,
   ) {}
 
   async preparePartyForQueue(party: Party, modes: MatchmakingMode[]) {
@@ -25,40 +21,36 @@ export class PlayerService {
 
     const resolvedScores = await Promise.all(
       plrs.map(async (steamId) => {
-        const isInGame = await this.qbus.execute<
-          GetSessionByUserQuery,
-          GetSessionByUserQueryResult
-        >(new GetSessionByUserQuery(new PlayerId(steamId)));
+        const [summary, ban] = await Promise.combine([
+          this.playerApi.playerControllerPlayerSummary(steamId),
+          this.playerApi.playerControllerBanInfo(steamId),
+        ]);
 
-        //
-        if (isInGame.serverUrl) {
+        if (summary.session?.serverUrl) {
           throw new Error("Can't queue while in game");
         }
 
-        const mmr = await this.qbus.execute<
-          GetPlayerInfoQuery,
-          GetPlayerInfoQueryResult
-        >(new GetPlayerInfoQuery(new PlayerId(steamId), Dota2Version.Dota_684));
-
-        if (mmr.banStatus.isBanned) {
+        if (ban.isBanned) {
           throw new Error("Can't queue when banned");
         }
 
         if (
-          modes.findIndex((mode) => !canQueueMode(mmr.accessLevel, mode)) !== -1
+          modes.findIndex(
+            (mode) => !canQueueMode(summary.accessLevel, mode),
+          ) !== -1
         ) {
           throw new Error("Can't queue this mode");
         }
 
         const score = PlayerService.getPlayerScore(
-          mmr.mmr,
-          mmr.recentWinrate,
-          mmr.gamesPlayed,
+          summary.season.mmr,
+          0.5,
+          summary.season.games,
         );
 
         return {
           score,
-          dodgeList: mmr.dodgeList,
+          dodgeList: [], // FIXME
         };
       }),
     );

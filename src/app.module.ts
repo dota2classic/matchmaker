@@ -7,9 +7,6 @@ import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm";
 import { CqrsModule } from "@nestjs/cqrs";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
-import { outerQueryNew } from "@/util/outerQuery";
-import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
-import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
 import { MetricsModule } from "./metrics/metrics.module";
 import { getTypeormConfig } from "@/config/typeorm.config";
 
@@ -54,10 +51,6 @@ import { getTypeormConfig } from "@/config/typeorm.config";
     MetricsModule,
   ],
   controllers: [],
-  providers: [
-    PublishService,
-    outerQueryNew(GetPlayerInfoQuery, "RedisQueue"),
-    outerQueryNew(GetSessionByUserQuery, "RedisQueue"),
-  ],
+  providers: [PublishService],
 })
 export class AppModule {}
