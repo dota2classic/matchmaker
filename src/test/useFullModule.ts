@@ -28,9 +28,10 @@ import {
 import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
 import { MatchAccessLevel } from "@/gateway/shared-types/match-access-level";
 import { QueueSettings } from "@/matchmaker/entity/queue-settings";
-import { PlayerApi } from "@/generated-api/gameserver";
 import { ConfigModule } from "@nestjs/config";
 import "@/util/promise";
+import { GenericContainer, StartedTestContainer } from "testcontainers";
+import axios from "axios";
 import SpyInstance = jest.SpyInstance;
 
 export interface TestEnvironment {
@@ -39,11 +40,14 @@ export interface TestEnvironment {
   containers: {
     pg: StartedPostgreSqlContainer;
     redis: StartedRedisContainer;
+    wiremock: StartedTestContainer;
   };
   ebus: EventBus;
   ebusSpy: SpyInstance;
   service<R>(c: Constructor<R>): R;
   repo<R extends ObjectLiteral>(c: EntityClassOrSchema): Repository<R>;
+
+  mock: (method: string, url: string, response: unknown) => Promise<void>;
 
   queryMocks: Record<string, jest.Mock>;
 }
@@ -60,6 +64,7 @@ export function useFullModule(): TestEnvironment {
     service: {} as unknown as any,
     repo: {} as unknown as any,
 
+    mock: {} as unknown as any,
     queryMocks: {},
   };
 
@@ -73,9 +78,28 @@ export function useFullModule(): TestEnvironment {
       .withPassword("password")
       .start();
 
+    te.containers.wiremock = await new GenericContainer(
+      "wiremock/wiremock:3.3.1",
+    )
+      .withExposedPorts(8080)
+      .start();
+
     te.containers.redis = await new RedisContainer()
       .withPassword("redispass")
       .start();
+
+    te.mock = async (method: string, url: string, response: unknown) => {
+      await axios.post(
+        `http://${te.containers.wiremock.getHost()}:${te.containers.wiremock.getFirstMappedPort()}/__admin/mappings`,
+        {
+          request: {
+            method: method,
+            url: url,
+          },
+          response,
+        },
+      );
+    };
 
     te.queryMocks = {
       [GetPlayerInfoQuery.name]: jest.fn((q: GetPlayerInfoQuery) => {
@@ -102,7 +126,7 @@ export function useFullModule(): TestEnvironment {
           isGlobal: true,
           load: [
             () => ({
-              gameserverUrl: "http://lol",
+              gameserverUrl: `http://${te.containers.wiremock.getHost()}:${te.containers.wiremock.getFirstMappedPort()}`,
             }),
           ],
         }),
@@ -124,59 +148,7 @@ export function useFullModule(): TestEnvironment {
         TypeOrmModule.forFeature(Entities),
         MatchmakerModule,
       ],
-      providers: [
-        {
-          provide: PlayerApi,
-          useValue: {
-            playerControllerPlayerSummary: (steamId: string) =>
-              Promise.resolve({
-                accessLevel: 1, // Example enum value
-                steamId: steamId,
-                season: {
-                  mmr: 4300,
-                  rank: 12,
-                  percentile: 86.7,
-                  matchesPlayed: 145,
-                  wins: 82,
-                  losses: 63,
-                },
-                overall: {
-                  mmr: 4200,
-                  rank: 18,
-                  percentile: 82.5,
-                  matchesPlayed: 385,
-                  wins: 207,
-                  losses: 178,
-                },
-                recalibration: {
-                  required: false,
-                  reason: null,
-                  targetMmr: null,
-                },
-                session: {
-                  matchId: "abc123-def456",
-                  startTime: new Date().toISOString(),
-                  hero: "Invoker",
-                  kills: 10,
-                  deaths: 2,
-                  assists: 14,
-                  abandon: false,
-                },
-                calibrationGamesLeft: 0,
-                reports: [
-                  {
-                    aspect: "communication",
-                    count: 3,
-                  },
-                  {
-                    aspect: "intentionalFeeding",
-                    count: 1,
-                  },
-                ],
-              }),
-          },
-        },
-      ],
+      providers: [],
     }).compile();
 
     te.app = await te.module.createNestMicroservice({

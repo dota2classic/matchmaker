@@ -13,17 +13,8 @@ import {
 } from "@/gateway/shared-types/matchmaking-mode";
 import { QueueUpdatedEvent } from "@/gateway/events/queue-updated.event";
 import { DataSource } from "typeorm";
-import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
-import {
-  BanStatus,
-  GetPlayerInfoQueryResult,
-} from "@/gateway/queries/GetPlayerInfo/get-player-info-query.result";
-import { PlayerId } from "@/gateway/shared-types/player-id";
-import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { createTestingUtils } from "@/test/party-queue-test.utils";
-import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
-import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
-import { MatchAccessLevel } from "@/gateway/shared-types/match-access-level";
+import { mockBanned, mockGood, mockNewbie, mockPlaying } from "@/test/mocks";
 import SpyInstance = jest.SpyInstance;
 
 describe("DbMatchmakingQueue", () => {
@@ -59,6 +50,8 @@ describe("DbMatchmakingQueue", () => {
       // given
       const party = await createParty(te, [], [testUser()]);
 
+      await mockGood(te, party.leader);
+
       // when
       await q.enterQueue(party, [
         MatchmakingMode.UNRANKED,
@@ -92,6 +85,7 @@ describe("DbMatchmakingQueue", () => {
       async (mode: MatchmakingMode) => {
         // given
         const party = await createParty(te, [], [testUser()]);
+        await mockGood(te, party.leader);
 
         // when
         await q.enterQueue(party, [mode]);
@@ -116,6 +110,7 @@ describe("DbMatchmakingQueue", () => {
         // given
         const party = await createParty(te, [], [testUser()]);
         await createRoom(te, MatchmakingMode.UNRANKED, [party]);
+        await mockGood(te, party.leader);
 
         // when
         await q.enterQueue(party, [mode]);
@@ -128,19 +123,7 @@ describe("DbMatchmakingQueue", () => {
     it("should not enter mode if player resolves to be insufficient access level", async () => {
       // given
       const party = await createParty(te, [], [testUser()]);
-      te.queryMocks[GetPlayerInfoQuery.name].mockReturnValueOnce(
-        new GetPlayerInfoQueryResult(
-          new PlayerId(party.leader),
-          Dota2Version.Dota_684,
-          1234,
-          0.5,
-          0.5,
-          50,
-          BanStatus.NOT_BANNED,
-          MatchAccessLevel.EDUCATION,
-          [],
-        ),
-      );
+      await mockNewbie(te, party.leader);
 
       // when
       await q.enterQueue(party, [MatchmakingMode.UNRANKED]);
@@ -152,19 +135,7 @@ describe("DbMatchmakingQueue", () => {
     it("should not enter queue if player resolves to be banned", async () => {
       // given
       const party = await createParty(te, [], [testUser()]);
-      te.queryMocks[GetPlayerInfoQuery.name].mockReturnValueOnce(
-        new GetPlayerInfoQueryResult(
-          new PlayerId(party.leader),
-          Dota2Version.Dota_684,
-          1234,
-          0.5,
-          0.5,
-          50,
-          BanStatus.PERMA_BAN,
-          MatchAccessLevel.HUMAN_GAMES,
-          [],
-        ),
-      );
+      await mockBanned(te, party.leader);
 
       // when
       await q.enterQueue(party, [MatchmakingMode.UNRANKED]);
@@ -177,16 +148,7 @@ describe("DbMatchmakingQueue", () => {
       // given
       const party = await createParty(te, [], [testUser(), testUser()]);
 
-      const mock = (q: GetSessionByUserQuery) => {
-        if (q.playerId.value === party.leader) {
-          return new GetSessionByUserQueryResult(undefined);
-        } else {
-          return new GetSessionByUserQueryResult("serverurl");
-        }
-      };
-      te.queryMocks[GetSessionByUserQuery.name]
-        .mockImplementationOnce(mock)
-        .mockImplementationOnce(mock);
+      await mockPlaying(te, party.leader);
 
       // when
       await q.enterQueue(party, [MatchmakingMode.UNRANKED]);

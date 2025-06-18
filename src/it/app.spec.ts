@@ -21,6 +21,7 @@ import { DotaTeam } from "@/gateway/shared-types/dota-team";
 import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { Party } from "@/matchmaker/entity/party";
 import { QueueService } from "@/matchmaker/service/queue.service";
+import { mockGood } from "@/test/mocks";
 
 describe("AppController (e2e)", () => {
   const te = useFullModule();
@@ -47,6 +48,9 @@ describe("AppController (e2e)", () => {
   it("enter queue and leave flow", async () => {
     const u1 = testUser();
     const u2 = testUser();
+
+    await mockGood(te, u1);
+    await mockGood(te, u2);
 
     // Enter 1x1 queue
     await publish(

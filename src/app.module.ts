@@ -9,7 +9,6 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
 import { MetricsModule } from "./metrics/metrics.module";
 import { getTypeormConfig } from "@/config/typeorm.config";
-import { Configuration, PlayerApi } from "@/generated-api/gameserver";
 
 @Module({
   imports: [
@@ -52,17 +51,6 @@ import { Configuration, PlayerApi } from "@/generated-api/gameserver";
     MetricsModule,
   ],
   controllers: [],
-  providers: [
-    PublishService,
-    {
-      provide: PlayerApi,
-      useFactory: (config: ConfigService) => {
-        return new PlayerApi(
-          new Configuration({ basePath: config.get("gameserverUrl") }),
-        );
-      },
-      inject: [ConfigService],
-    },
-  ],
+  providers: [PublishService],
 })
 export class AppModule {}
