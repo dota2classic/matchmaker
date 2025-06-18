@@ -4,7 +4,7 @@ import { GetUserRoomQuery } from "@/gateway/queries/GetUserRoom/get-user-room.qu
 import { GetUserRoomQueryResult } from "@/gateway/queries/GetUserRoom/get-user-room-query.result";
 import {
   GetPartyQueryResultDto,
-  GetUserRoomQueryResultRoomInfo,
+  PlayerRoomDto,
 } from "@/matchmaker/dto/matchmaker.dto";
 import { GetPartyQuery } from "@/gateway/queries/GetParty/get-party.query";
 import { GetPartyQueryResult } from "@/gateway/queries/GetParty/get-party-query.result";
@@ -18,13 +18,16 @@ export class MatchmakerApiController {
   @Get("/player/:id/room")
   public async getUserRoom(
     @Param("id") steamId: string,
-  ): Promise<GetUserRoomQueryResultRoomInfo | undefined> {
-    return await this.qbus
+  ): Promise<PlayerRoomDto> {
+    const room = await this.qbus
       .execute<
         GetUserRoomQuery,
         GetUserRoomQueryResult
       >(new GetUserRoomQuery(steamId))
       .then((t) => t?.info);
+    return {
+      room,
+    };
   }
 
   @Get("/player/:id/party")

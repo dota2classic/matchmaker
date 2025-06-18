@@ -25,3 +25,7 @@ export class GetPartyQueryResultDto {
   public readonly inQueue: boolean;
   public readonly enterQueueTime?: string;
 }
+
+export class PlayerRoomDto {
+  room?: GetUserRoomQueryResultRoomInfo;
+}
