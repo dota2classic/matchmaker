@@ -3,8 +3,8 @@ import { AppModule } from "./app.module";
 import { RedisOptions, Transport } from "@nestjs/microservices";
 import configuration from "@/config/configuration";
 import { ConfigService } from "@nestjs/config";
-import { WinstonWrapper } from "@/util/logger";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { WinstonWrapper } from "@dota2classic/nest_logger";
 
 async function bootstrap() {
   const config = new ConfigService(configuration());
@@ -13,6 +13,7 @@ async function bootstrap() {
     logger: new WinstonWrapper(
       config.get("fluentbit.host")!,
       config.get("fluentbit.port")!,
+      config.get("fluentbit.application")!,
       config.get<boolean>("fluentbit.disabled"),
     ),
   });
