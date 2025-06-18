@@ -27,7 +27,7 @@
     "docker:local": "docker build . -t dota2classic/matchmaking:core2"
   },
   "dependencies": {
-    "@dota2classic/nest_logger": "@0.0.10",
+    "@dota2classic/nest_logger": "0.0.10",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.3.0",
     "@nestjs/core": "^10.0.0",
