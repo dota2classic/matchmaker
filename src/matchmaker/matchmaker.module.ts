@@ -20,6 +20,7 @@ import { PartyInviteRequestedHandler } from "@/matchmaker/event-handler/party-in
 import { PartyInviteAcceptedHandler } from "@/matchmaker/event-handler/party-invite-accepted.handler";
 import { PartyLeaveRequestedHandler } from "@/matchmaker/event-handler/party-leave-requested.handler";
 import { ReadyStateReceivedHandler } from "@/matchmaker/event-handler/ready-state-received.handler";
+import { MatchmakerApiController } from "@/matchmaker/matchmaker-api.controller";
 
 const EventHandlers = [
   PlayerEnterQueueRequestedHandler,
@@ -38,7 +39,7 @@ const QueryHandlers = [
 ];
 
 @Module({
-  controllers: [MatchmakerController],
+  controllers: [MatchmakerController, MatchmakerApiController],
   imports: [TypeOrmModule.forFeature(Entities), CqrsModule],
   providers: [
     PartyService,

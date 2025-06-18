@@ -8,6 +8,8 @@ import {
   PrometheusUseFactoryOptions,
 } from "@willsoto/nestjs-prometheus";
 import { MetricsService } from "@/metrics/metrics.service";
+import { PrometheusBasicAuthStrategy } from "@/metrics/prometheus-basic-auth.strategy";
+import { PrometheusGuardedController } from "@/metrics/prometheus-guarded.controller";
 
 @Global()
 @Module({
@@ -22,11 +24,13 @@ import { MetricsService } from "@/metrics/metrics.service";
       },
       global: true,
       imports: [],
+      controller: PrometheusGuardedController,
       inject: [ConfigService],
     }),
   ],
   providers: [
     MetricsService,
+    PrometheusBasicAuthStrategy,
     makeGaugeProvider({
       name: "d2c_avg_diff",
       help: "123",
@@ -61,6 +65,7 @@ import { MetricsService } from "@/metrics/metrics.service";
       percentiles: [0.01, 0.1, 0.5, 0.9, 0.99],
     }),
   ],
+  controllers: [PrometheusGuardedController],
   exports: [MetricsService],
 })
 export class MetricsModule {}

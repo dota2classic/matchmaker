@@ -4,6 +4,7 @@ import { RedisOptions, Transport } from "@nestjs/microservices";
 import configuration from "@/config/configuration";
 import { ConfigService } from "@nestjs/config";
 import { WinstonWrapper } from "@/util/logger";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 async function bootstrap() {
   const config = new ConfigService(configuration());
@@ -25,6 +26,16 @@ async function bootstrap() {
       host: config.get("redis.host"),
     },
   });
+
+  const options = new DocumentBuilder()
+    .setTitle("GameServer api")
+    .setDescription("Matches, players, mmrs")
+    .setVersion("1.0")
+    .addTag("game")
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, options);
+  SwaggerModule.setup("api", app, document);
 
   await app.listen(7777);
   await app.startAllMicroservices();
