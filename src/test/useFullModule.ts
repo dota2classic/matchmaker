@@ -19,7 +19,6 @@ import { INestMicroservice } from "@nestjs/common";
 import { RedisContainer, StartedRedisContainer } from "@testcontainers/redis";
 import { Transport } from "@nestjs/microservices";
 import { EntityClassOrSchema } from "@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type";
-import { testMockQuery } from "@/test/mocks";
 import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
 import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
 import {
@@ -29,6 +28,9 @@ import {
 import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
 import { MatchAccessLevel } from "@/gateway/shared-types/match-access-level";
 import { QueueSettings } from "@/matchmaker/entity/queue-settings";
+import { PlayerApi } from "@/generated-api/gameserver";
+import { ConfigModule } from "@nestjs/config";
+import "@/util/promise";
 import SpyInstance = jest.SpyInstance;
 
 export interface TestEnvironment {
@@ -96,6 +98,14 @@ export function useFullModule(): TestEnvironment {
 
     te.module = await Test.createTestingModule({
       imports: [
+        await ConfigModule.forRoot({
+          isGlobal: true,
+          load: [
+            () => ({
+              gameserverUrl: "http://lol",
+            }),
+          ],
+        }),
         TypeOrmModule.forRoot({
           host: te.containers.pg.getHost(),
           port: te.containers.pg.getFirstMappedPort(),
@@ -115,14 +125,57 @@ export function useFullModule(): TestEnvironment {
         MatchmakerModule,
       ],
       providers: [
-        testMockQuery(
-          GetPlayerInfoQuery,
-          te.queryMocks[GetPlayerInfoQuery.name],
-        ),
-        testMockQuery(
-          GetSessionByUserQuery,
-          te.queryMocks[GetSessionByUserQuery.name],
-        ),
+        {
+          provide: PlayerApi,
+          useValue: {
+            playerControllerPlayerSummary: (steamId: string) =>
+              Promise.resolve({
+                accessLevel: 1, // Example enum value
+                steamId: steamId,
+                season: {
+                  mmr: 4300,
+                  rank: 12,
+                  percentile: 86.7,
+                  matchesPlayed: 145,
+                  wins: 82,
+                  losses: 63,
+                },
+                overall: {
+                  mmr: 4200,
+                  rank: 18,
+                  percentile: 82.5,
+                  matchesPlayed: 385,
+                  wins: 207,
+                  losses: 178,
+                },
+                recalibration: {
+                  required: false,
+                  reason: null,
+                  targetMmr: null,
+                },
+                session: {
+                  matchId: "abc123-def456",
+                  startTime: new Date().toISOString(),
+                  hero: "Invoker",
+                  kills: 10,
+                  deaths: 2,
+                  assists: 14,
+                  abandon: false,
+                },
+                calibrationGamesLeft: 0,
+                reports: [
+                  {
+                    aspect: "communication",
+                    count: 3,
+                  },
+                  {
+                    aspect: "intentionalFeeding",
+                    count: 1,
+                  },
+                ],
+              }),
+          },
+        },
       ],
     }).compile();
 

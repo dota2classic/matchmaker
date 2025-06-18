@@ -6,6 +6,8 @@ import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { WinstonWrapper } from "@dota2classic/nest_logger";
 
+import "./util/promise";
+
 async function bootstrap() {
   const config = new ConfigService(configuration());
 

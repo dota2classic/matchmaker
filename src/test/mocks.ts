@@ -28,3 +28,5 @@ export function testMockQuery<T extends IQuery, B>(
     inject: [],
   };
 }
+
+export function testMockRequest() {}
