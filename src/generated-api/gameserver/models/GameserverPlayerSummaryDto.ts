@@ -96,7 +96,6 @@ export function GameserverPlayerSummaryDtoFromJSONTyped(json: any, ignoreDiscrim
         return json;
     }
 
-    console.log(json)
     return {
 
         'accessLevel': GameserverMatchAccessLevelFromJSON(json['accessLevel']),
