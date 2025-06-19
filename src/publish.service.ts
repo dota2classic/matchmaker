@@ -1,4 +1,9 @@
-import { Inject, Injectable, OnApplicationBootstrap } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+} from "@nestjs/common";
 import { ClientProxy } from "@nestjs/microservices";
 import { EventBus, ofType, QueryBus } from "@nestjs/cqrs";
 import { PartyInviteCreatedEvent } from "@/gateway/events/party/party-invite-created.event";
@@ -13,34 +18,40 @@ import { PlayerDeclinedGameEvent } from "@/gateway/events/mm/player-declined-gam
 
 @Injectable()
 export class PublishService implements OnApplicationBootstrap {
+  private logger = new Logger(PublishService.name);
+
   constructor(
     private readonly ebus: EventBus,
     private readonly qbus: QueryBus,
     @Inject("RedisQueue") private readonly redisEventQueue: ClientProxy,
+    @Inject("RMQ") private readonly rabbitQueue: ClientProxy,
   ) {}
 
   async onApplicationBootstrap() {
+    await this.redisEvents();
+    await this.rabbitEvents();
+  }
+
+  private async rabbitEvents() {
+    try {
+      await this.rabbitQueue.connect();
+    } catch (e) {
+      this.logger.warn("Error connecting to rabbit", e);
+    }
+
+    const publicEvents: any[] = [RoomReadyEvent];
+
+    this.ebus
+      .pipe(ofType(...publicEvents))
+      .subscribe((t) => this.redisEventQueue.emit(t.constructor.name, t));
+  }
+
+  private async redisEvents() {
     try {
       await this.redisEventQueue.connect();
     } catch (e) {}
-
-    // setInterval(async () => {
-    //   const some = await this.redisEventQueue.emit(
-    //     PlayerEnterQueueRequestedEvent.name,
-    //     new PlayerEnterQueueRequestedEvent("123", [MatchmakingMode.BOTS_2X2])
-    //   ).toPromise();
-    // }, 500)
-
     // events to publish to global
     const publicEvents: any[] = [
-      // QueueCreatedEvent,
-      // QueueUpdatedEvent,
-      // ReadyStateUpdatedEvent,
-      // ReadyCheckStartedEvent,
-      // RoomReadyCheckCompleteEvent,
-      // RoomReadyEvent,
-      // RoomNotReadyEvent,
-      //
       PartyInviteExpiredEvent,
       PartyInviteCreatedEvent,
       PartyUpdatedEvent,

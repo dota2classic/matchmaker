@@ -6,7 +6,12 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm";
 import { CqrsModule } from "@nestjs/cqrs";
 import { ScheduleModule } from "@nestjs/schedule";
-import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
+import {
+  ClientsModule,
+  RedisOptions,
+  RmqOptions,
+  Transport,
+} from "@nestjs/microservices";
 import { MetricsModule } from "./metrics/metrics.module";
 import { getTypeormConfig } from "@/config/typeorm.config";
 
@@ -41,6 +46,32 @@ import { getTypeormConfig } from "@/config/typeorm.config";
             options: {
               host: config.get("redis.host"),
               password: config.get("redis.password"),
+            },
+          };
+        },
+        inject: [ConfigService],
+        imports: [],
+      },
+      {
+        name: "RMQ",
+        useFactory(config: ConfigService): RmqOptions {
+          return {
+            transport: Transport.RMQ,
+            options: {
+              urls: [
+                {
+                  hostname: config.get<string>("rabbitmq.host"),
+                  port: config.get<number>("rabbitmq.port"),
+                  protocol: "amqp",
+                  username: config.get<string>("rabbitmq.user"),
+                  password: config.get<string>("rabbitmq.password"),
+                },
+              ],
+              queue: config.get<string>("rabbitmq.matchmaker_events"),
+              queueOptions: {
+                durable: true,
+              },
+              prefetchCount: 5,
             },
           };
         },
