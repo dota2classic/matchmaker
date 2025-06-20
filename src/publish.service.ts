@@ -43,7 +43,7 @@ export class PublishService implements OnApplicationBootstrap {
 
     this.ebus
       .pipe(ofType(...publicEvents))
-      .subscribe((t) => this.redisEventQueue.emit(t.constructor.name, t));
+      .subscribe((t) => this.rabbitQueue.emit("RMQ" + t.constructor.name, t));
   }
 
   private async redisEvents() {
