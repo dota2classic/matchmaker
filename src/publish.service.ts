@@ -39,7 +39,7 @@ export class PublishService implements OnApplicationBootstrap {
       this.logger.warn("Error connecting to rabbit", e);
     }
 
-    const publicEvents: any[] = [RoomReadyEvent];
+    const publicEvents: any[] = [RoomReadyEvent, PlayerDeclinedGameEvent];
 
     this.ebus
       .pipe(ofType(...publicEvents))
