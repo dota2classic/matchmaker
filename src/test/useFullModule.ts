@@ -53,7 +53,7 @@ export interface TestEnvironment {
 }
 
 export function useFullModule(): TestEnvironment {
-  jest.setTimeout(120_000);
+  jest.setTimeout(180_000);
 
   const te: TestEnvironment = {
     module: undefined as unknown as any,

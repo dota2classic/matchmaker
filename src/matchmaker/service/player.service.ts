@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { QueryBus } from "@nestjs/cqrs";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { canQueueMode } from "@/gateway/shared-types/match-access-level";
 import { PlayerApi } from "@/generated-api/gameserver";
+import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 
 @Injectable()
 export class PlayerService {
@@ -14,6 +15,7 @@ export class PlayerService {
     @InjectRepository(Party)
     private readonly partyRepository: Repository<Party>,
     private readonly playerApi: PlayerApi,
+    private readonly ds: DataSource,
   ) {}
 
   async preparePartyForQueue(party: Party, modes: MatchmakingMode[]) {
@@ -51,6 +53,7 @@ export class PlayerService {
         return {
           score,
           dodgeList: [], // FIXME
+          steamId,
         };
       }),
     );
@@ -60,9 +63,18 @@ export class PlayerService {
       [] as string[],
     );
 
+    party.players.forEach((plr) => {
+      plr.score =
+        resolvedScores.find((t) => t.steamId === plr.steamId)?.score || 0;
+    });
+
     party.score = resolvedScores.reduce((a, b) => a + b.score, 0);
     party.dodgeList = dodgeList;
-    await this.partyRepository.save(party);
+
+    await this.ds.transaction(async (tx) => {
+      await tx.save(Party, party);
+      await tx.save(PlayerInParty, party.players);
+    });
 
     return party;
   }

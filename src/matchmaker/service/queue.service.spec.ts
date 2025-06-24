@@ -11,6 +11,8 @@ import { DeepPartial, In } from "typeorm";
 import { GameBalance } from "@/matchmaker/balance/game-balance";
 import { Party } from "@/matchmaker/entity/party";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
+import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
+import { QueueSettings } from "@/matchmaker/entity/queue-settings";
 
 describe("QueueService", () => {
   const te = useFullModule();
@@ -18,6 +20,11 @@ describe("QueueService", () => {
 
   beforeEach(() => {
     qs = te.service(QueueService);
+  });
+
+  afterEach(async () => {
+    // Clean up
+    await te.repo(Party).update({ inQueue: true }, { inQueue: false });
   });
 
   it("should find SOLOMID game", async () => {
@@ -53,10 +60,18 @@ describe("QueueService", () => {
 
   it("should not find a game where score difference too big", async () => {
     // given
-    console.log(
-      "QUEUESERIZE:",
-      await te.repo(Party).count({ where: { inQueue: true } }),
+
+    await te.repo(QueueSettings).update(
+      {
+        mode: MatchmakingMode.UNRANKED,
+      },
+      {
+        maxTeamScoreDifference: 1000,
+        lastCheckTimestamp: new Date(0),
+        inProgress: false,
+      },
     );
+
     const boss = testUser();
     const noobParties = await createParties(
       te,
@@ -75,6 +90,55 @@ describe("QueueService", () => {
 
     // when
     await qs.cycle();
+
+    // then
+
+    await expect(
+      te.repo(Party).find({ where: { inQueue: true } }),
+    ).resolves.toHaveLength(10);
+  });
+
+  it("should not find a game where score difference between players is too big", async () => {
+    // given
+    console.log(
+      "QUEUESERIZE:",
+      await te.repo(Party).count({ where: { inQueue: true } }),
+    );
+
+    await te.repo(QueueSettings).update(
+      {
+        mode: MatchmakingMode.UNRANKED,
+      },
+      {
+        maxPlayerScoreDifference: 1000,
+        lastCheckTimestamp: new Date(0),
+        inProgress: false,
+      },
+    );
+
+    const noobs = await createParties(te, 8, [MatchmakingMode.UNRANKED], true);
+    const bossParties = await createParties(
+      te,
+      2,
+      [MatchmakingMode.UNRANKED],
+      true,
+    );
+
+    bossParties.forEach((t) => (t.players[0].score = 10000));
+
+    await te.repo(PlayerInParty).save(bossParties.map((t) => t.players[0]));
+
+    // when
+    await qs.findGamesForConfig(
+      qs["modeBalancingMap"].find((t) => t.mode === MatchmakingMode.UNRANKED)!,
+      await te.repo<Party>(Party).find({
+        where: { inQueue: true },
+        relations: ["players"],
+      }),
+      await te
+        .repo<QueueSettings>(QueueSettings)
+        .findOneOrFail({ where: { mode: MatchmakingMode.UNRANKED } }),
+    );
 
     // then
 

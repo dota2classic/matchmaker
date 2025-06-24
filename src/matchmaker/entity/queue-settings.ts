@@ -29,6 +29,18 @@ export class QueueSettings {
   })
   inProgress: boolean;
 
+  @Column({
+    name: "max_team_score_difference",
+    default: 1000000,
+  })
+  maxTeamScoreDifference: number;
+
+  @Column({
+    name: "max_player_score_difference",
+    default: 1000000,
+  })
+  maxPlayerScoreDifference: number;
+
   get shouldRunMatchmaking(): boolean {
     return (
       !this.inProgress &&

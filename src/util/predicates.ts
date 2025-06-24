@@ -1,5 +1,6 @@
 import { Team } from "@/matchmaker/balance/perms";
 import { totalScore } from "@/util/totalScore";
+import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 
 export const isDodgeListViable = (team: Team) => {
   const players = team.flatMap((t) => t.players).map((it) => it.steamId);
@@ -24,3 +25,21 @@ export const MakeMaxScoreDifferencePredicate =
   (maxScoreDifference: number): BalancePredicate =>
   (left, right) =>
     Math.abs(totalScore(left) - totalScore(right)) <= maxScoreDifference;
+
+export const MakeMaxPlayerScoreDeviationPredicate =
+  (maxScoreDifference: number): BalancePredicate =>
+  (left, right) => {
+    const pool: PlayerInParty[] = [...left, ...right].flatMap(
+      (party) => party.players,
+    );
+
+    pool.sort((a, b) => a.score - b.score);
+
+    const diff = Math.abs(pool[0].score - pool[pool.length - 1].score);
+
+    if (diff > maxScoreDifference) {
+      console.log("Max player diff too big!", diff, maxScoreDifference, pool);
+    }
+
+    return diff <= maxScoreDifference;
+  };

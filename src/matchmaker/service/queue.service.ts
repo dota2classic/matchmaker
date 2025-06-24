@@ -15,6 +15,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
   DodgeListPredicate,
+  MakeMaxPlayerScoreDeviationPredicate,
   MakeMaxScoreDifferencePredicate,
 } from "@/util/predicates";
 import { takeWhileNotDodged } from "@/util/take-while-not-dodged";
@@ -28,13 +29,14 @@ export class QueueService implements OnApplicationBootstrap {
     {
       mode: MatchmakingMode.UNRANKED,
       priority: 0,
-      findGames: (entries) =>
+      findGames: (entries, qs) =>
         this.findBalancedGame(
           MatchmakingMode.UNRANKED,
           entries,
           5,
           5000,
-          2_000,
+          qs.maxTeamScoreDifference,
+          qs.maxPlayerScoreDifference,
         ),
     },
     {
@@ -52,13 +54,27 @@ export class QueueService implements OnApplicationBootstrap {
       mode: MatchmakingMode.BOTS_2X2,
       priority: 10,
       findGames: (entries) =>
-        this.findBalancedGame(MatchmakingMode.BOTS_2X2, entries, 2, 5000, 10e6),
+        this.findBalancedGame(
+          MatchmakingMode.BOTS_2X2,
+          entries,
+          2,
+          5000,
+          10e6,
+          10e6,
+        ),
     },
     {
       mode: MatchmakingMode.HIGHROOM,
       priority: 5,
       findGames: (entries) =>
-        this.findBalancedGame(MatchmakingMode.HIGHROOM, entries, 5, 5000, 10e6),
+        this.findBalancedGame(
+          MatchmakingMode.HIGHROOM,
+          entries,
+          5,
+          5000,
+          10e6,
+          10e6,
+        ),
     },
   ];
 
@@ -103,7 +119,7 @@ export class QueueService implements OnApplicationBootstrap {
         throw "No balance algorithm specified for mode " + setting.mode;
       }
 
-      const balances = await this.findGamesForConfig(algo, entries);
+      const balances = await this.findGamesForConfig(algo, entries, setting);
       this.logger.log(`Found balances ${balances.length}`);
       await this.submitFoundGames(balances);
       const timeTaken = Date.now() - start;
@@ -140,6 +156,7 @@ export class QueueService implements OnApplicationBootstrap {
   public async findGamesForConfig(
     balanceConfig: BalanceConfig,
     _pool: Party[],
+    qs: QueueSettings,
   ): Promise<GameBalance[]> {
     const totalPool = [..._pool];
 
@@ -151,38 +168,42 @@ export class QueueService implements OnApplicationBootstrap {
       party_count: taskPool.length,
       player_count: taskPool.reduce((a, b) => a + b.players.length, 0),
     });
-    return this.findAllGames(taskPool, balanceConfig);
+    return this.findAllGames(taskPool, balanceConfig, qs);
   }
 
-  public async iterateModes(_pool: Party[]): Promise<GameBalance[]> {
-    const tasks = this.modeBalancingMap.sort((a, b) => a.priority - b.priority);
-    let totalPool = [..._pool];
-    const foundGames: GameBalance[] = [];
+  // public async iterateModes(_pool: Party[]): Promise<GameBalance[]> {
+  //   const tasks = this.modeBalancingMap.sort((a, b) => a.priority - b.priority);
+  //   let totalPool = [..._pool];
+  //   const foundGames: GameBalance[] = [];
+  //
+  //   for (const balanceConfig of tasks) {
+  //     const taskPool = totalPool.filter((t) =>
+  //       t.queueModes.includes(balanceConfig.mode),
+  //     );
+  //     this.logger.log(`Player to balance for mode`, {
+  //       lobby_type: balanceConfig.mode,
+  //       party_count: taskPool.length,
+  //       player_count: taskPool.reduce((a, b) => a + b.players.length, 0),
+  //     });
+  //     const balances = await this.findAllGames(taskPool, balanceConfig);
+  //
+  //     foundGames.push(...balances);
+  //     const partiesToRemove = balances.flatMap((t) =>
+  //       t.right.concat(t.left).flatMap((t) => t.id),
+  //     );
+  //     totalPool = totalPool.filter(
+  //       (entry) => !partiesToRemove.includes(entry.id),
+  //     );
+  //   }
+  //
+  //   return foundGames;
+  // }
 
-    for (const balanceConfig of tasks) {
-      const taskPool = totalPool.filter((t) =>
-        t.queueModes.includes(balanceConfig.mode),
-      );
-      this.logger.log(`Player to balance for mode`, {
-        lobby_type: balanceConfig.mode,
-        party_count: taskPool.length,
-        player_count: taskPool.reduce((a, b) => a + b.players.length, 0),
-      });
-      const balances = await this.findAllGames(taskPool, balanceConfig);
-
-      foundGames.push(...balances);
-      const partiesToRemove = balances.flatMap((t) =>
-        t.right.concat(t.left).flatMap((t) => t.id),
-      );
-      totalPool = totalPool.filter(
-        (entry) => !partiesToRemove.includes(entry.id),
-      );
-    }
-
-    return foundGames;
-  }
-
-  private async findAllGames(eligible: Party[], bc: BalanceConfig) {
+  private async findAllGames(
+    eligible: Party[],
+    bc: BalanceConfig,
+    qs: QueueSettings,
+  ) {
     let pool = [...eligible].sort(
       createDateComparator<Party>((it) => it.enterQueueAt!),
     );
@@ -191,7 +212,7 @@ export class QueueService implements OnApplicationBootstrap {
 
     const foundGames: GameBalance[] = [];
 
-    while ((r = await bc.findGames(pool)) !== undefined) {
+    while ((r = await bc.findGames(pool, qs)) !== undefined) {
       const toRemove = r.left.concat(r.right).flatMap((a) => a.id);
       pool = pool.filter((entry) => !toRemove.includes(entry.id));
       foundGames.push(r);
@@ -205,7 +226,8 @@ export class QueueService implements OnApplicationBootstrap {
     pool: Party[],
     teamSize: number = 5,
     timeLimit: number = 5000,
-    maxScoreDifference: number = 9000,
+    maxTeamScoreDifference: number,
+    maxPlayerScoreDifference: number,
   ): Promise<GameBalance | undefined> {
     // Let's first filter off this case
     const totalPlayersInQ = pool.reduce((a, b) => a + b.players.length, 0);
@@ -218,7 +240,11 @@ export class QueueService implements OnApplicationBootstrap {
       teamSize,
       this.balanceFunction,
       timeLimit, // Max 5 seconds to find a game
-      [MakeMaxScoreDifferencePredicate(maxScoreDifference), DodgeListPredicate],
+      [
+        MakeMaxScoreDifferencePredicate(maxTeamScoreDifference),
+        MakeMaxPlayerScoreDeviationPredicate(maxPlayerScoreDifference),
+        DodgeListPredicate,
+      ],
     );
     if (bestMatch === undefined) {
       return undefined;

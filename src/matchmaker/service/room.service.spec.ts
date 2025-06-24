@@ -53,7 +53,13 @@ describe("RoomService", () => {
           const p = new Party();
           p.id = pid;
           p.players = [
-            { steamId: testUser(), partyId: pid, isLeader: true, party: p },
+            {
+              steamId: testUser(),
+              partyId: pid,
+              isLeader: true,
+              party: p,
+              score: 0,
+            },
           ];
           p.score = 0;
           p.enterQueueAt = new Date();
