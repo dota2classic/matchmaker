@@ -34,7 +34,7 @@ export class QueueService implements OnApplicationBootstrap {
           entries,
           5,
           5000,
-          6_000,
+          2_000,
         ),
     },
     {
