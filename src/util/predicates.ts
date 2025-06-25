@@ -37,9 +37,5 @@ export const MakeMaxPlayerScoreDeviationPredicate =
 
     const diff = Math.abs(pool[0].score - pool[pool.length - 1].score);
 
-    if (diff > maxScoreDifference) {
-      console.log("Max player diff too big!", diff, maxScoreDifference, pool);
-    }
-
     return diff <= maxScoreDifference;
   };
