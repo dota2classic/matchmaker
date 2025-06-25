@@ -4,6 +4,7 @@ import { TestEnvironment } from "@/test/useFullModule";
 import { BanReason } from "@/gateway/shared-types/ban";
 import {
   GameserverBanStatusDto,
+  GameserverDodgeListEntryDto,
   GameserverPlayerSummaryDto,
 } from "@/generated-api/gameserver";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
@@ -98,22 +99,40 @@ export async function mockBanInfo(
   });
 }
 
+export async function mockDodgeList(
+  te: TestEnvironment,
+  steamId: string,
+  list: string[] = [],
+) {
+  await te.mock("GET", `/player/dodge_list?steamId=${steamId}`, {
+    status: 200,
+    jsonBody: list.map((t) => ({
+      steamId: t,
+      createdAt: new Date().toISOString(),
+    })) satisfies GameserverDodgeListEntryDto[],
+  });
+}
+
 export const mockGood = async (te: TestEnvironment, steamId: string) => {
   await mockSummary(te, steamId, MatchAccessLevel.HUMAN_GAMES, false);
   await mockBanInfo(te, steamId, false);
+  await mockDodgeList(te, steamId, []);
 };
 
 export const mockNewbie = async (te: TestEnvironment, steamId: string) => {
   await mockSummary(te, steamId, MatchAccessLevel.EDUCATION, false);
   await mockBanInfo(te, steamId, false);
+  await mockDodgeList(te, steamId, []);
 };
 
 export const mockPlaying = async (te: TestEnvironment, steamId: string) => {
   await mockSummary(te, steamId, MatchAccessLevel.HUMAN_GAMES, true);
   await mockBanInfo(te, steamId, false);
+  await mockDodgeList(te, steamId, []);
 };
 
 export const mockBanned = async (te: TestEnvironment, steamId: string) => {
   await mockSummary(te, steamId, MatchAccessLevel.HUMAN_GAMES, false);
   await mockBanInfo(te, steamId, true);
+  await mockDodgeList(te, steamId, []);
 };

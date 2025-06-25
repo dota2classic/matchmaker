@@ -23,9 +23,10 @@ export class PlayerService {
 
     const resolvedScores = await Promise.all(
       plrs.map(async (steamId) => {
-        const [summary, ban] = await Promise.combine([
+        const [summary, ban, dodgeList] = await Promise.combine([
           this.playerApi.playerControllerPlayerSummary(steamId),
           this.playerApi.playerControllerBanInfo(steamId),
+          this.playerApi.playerControllerGetDodgeList(steamId),
         ]);
 
         if (summary.session?.serverUrl) {
@@ -52,7 +53,7 @@ export class PlayerService {
 
         return {
           score,
-          dodgeList: [], // FIXME
+          dodgeList: dodgeList.map((t) => t.steamId),
           steamId,
         };
       }),
