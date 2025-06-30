@@ -92,7 +92,7 @@ export class PlayerService {
   ) {
     if (!modes.includes(MatchmakingMode.HIGHROOM)) return;
 
-    if (summary.overall.games < 50) {
+    if (summary.overall.games < 30) {
       throw "Not enough games to queue";
     }
   }
