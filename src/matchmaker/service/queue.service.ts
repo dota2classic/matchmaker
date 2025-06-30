@@ -28,7 +28,7 @@ export class QueueService implements OnApplicationBootstrap {
   private modeBalancingMap: BalanceConfig[] = [
     {
       mode: MatchmakingMode.UNRANKED,
-      priority: 0,
+      priority: 1,
       findGames: (entries, qs) =>
         this.findBalancedGame(
           MatchmakingMode.UNRANKED,
@@ -65,15 +65,15 @@ export class QueueService implements OnApplicationBootstrap {
     },
     {
       mode: MatchmakingMode.HIGHROOM,
-      priority: 5,
-      findGames: (entries) =>
+      priority: 0,
+      findGames: (entries, qs) =>
         this.findBalancedGame(
           MatchmakingMode.HIGHROOM,
           entries,
           5,
           5000,
-          10e6,
-          10e6,
+          qs.maxTeamScoreDifference,
+          qs.maxPlayerScoreDifference,
         ),
     },
   ];
