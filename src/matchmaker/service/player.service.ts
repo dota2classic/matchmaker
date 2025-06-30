@@ -5,7 +5,10 @@ import { DataSource, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { canQueueMode } from "@/gateway/shared-types/match-access-level";
-import { PlayerApi } from "@/generated-api/gameserver";
+import {
+  GameserverPlayerSummaryDto,
+  PlayerApi,
+} from "@/generated-api/gameserver";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 
 @Injectable()
@@ -36,6 +39,9 @@ export class PlayerService {
         if (ban.isBanned) {
           throw new Error("Can't queue when banned");
         }
+
+        // highroom tmp check
+        this.assertHighroom(modes, summary);
 
         if (
           modes.findIndex(
@@ -78,6 +84,17 @@ export class PlayerService {
     });
 
     return party;
+  }
+
+  private assertHighroom(
+    modes: MatchmakingMode[],
+    summary: GameserverPlayerSummaryDto,
+  ) {
+    if (!modes.includes(MatchmakingMode.HIGHROOM)) return;
+
+    if (summary.overall.games < 50) {
+      throw "Not enough games to queue";
+    }
   }
 
   public static getPlayerScore = (
