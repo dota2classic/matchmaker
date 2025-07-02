@@ -15,11 +15,9 @@
 import {
   GameserverDotaGameMode,
   GameserverDotaGameModeFromJSON,
-  GameserverDotaGameModeFromJSONTyped,
   GameserverDotaGameModeToJSON,
   GameserverMatchmakingMode,
   GameserverMatchmakingModeFromJSON,
-  GameserverMatchmakingModeFromJSONTyped,
   GameserverMatchmakingModeToJSON,
   GameserverPlayerInMatchDto,
   GameserverPlayerInMatchDtoFromJSON,

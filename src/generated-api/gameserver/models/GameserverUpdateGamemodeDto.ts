@@ -15,11 +15,9 @@
 import {
   GameserverDotaGameMode,
   GameserverDotaGameModeFromJSON,
-  GameserverDotaGameModeFromJSONTyped,
   GameserverDotaGameModeToJSON,
   GameserverDotaMap,
   GameserverDotaMapFromJSON,
-  GameserverDotaMapFromJSONTyped,
   GameserverDotaMapToJSON
 } from "./";
 

@@ -16,7 +16,6 @@ import { exists } from "../runtime";
 import {
   GameserverAchievementKey,
   GameserverAchievementKeyFromJSON,
-  GameserverAchievementKeyFromJSONTyped,
   GameserverAchievementKeyToJSON,
   GameserverMatchDto,
   GameserverMatchDtoFromJSON,

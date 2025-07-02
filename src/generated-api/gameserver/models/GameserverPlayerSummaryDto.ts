@@ -95,7 +95,6 @@ export function GameserverPlayerSummaryDtoFromJSONTyped(json: any, ignoreDiscrim
     if ((json === undefined) || (json === null)) {
         return json;
     }
-
     return {
 
         'accessLevel': GameserverMatchAccessLevelFromJSON(json['accessLevel']),

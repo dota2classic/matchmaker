@@ -12,12 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {
-  GameserverMatchmakingMode,
-  GameserverMatchmakingModeFromJSON,
-  GameserverMatchmakingModeFromJSONTyped,
-  GameserverMatchmakingModeToJSON
-} from "./";
+import { GameserverMatchmakingMode, GameserverMatchmakingModeFromJSON, GameserverMatchmakingModeToJSON } from "./";
 
 /**
  *

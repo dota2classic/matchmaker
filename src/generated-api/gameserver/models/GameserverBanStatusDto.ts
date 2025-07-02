@@ -12,12 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {
-  GameserverBanReason,
-  GameserverBanReasonFromJSON,
-  GameserverBanReasonFromJSONTyped,
-  GameserverBanReasonToJSON
-} from "./";
+import { GameserverBanReason, GameserverBanReasonFromJSON, GameserverBanReasonToJSON } from "./";
 
 /**
  *

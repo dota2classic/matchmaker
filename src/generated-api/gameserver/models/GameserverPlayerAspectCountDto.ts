@@ -12,12 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {
-  GameserverPlayerAspect,
-  GameserverPlayerAspectFromJSON,
-  GameserverPlayerAspectFromJSONTyped,
-  GameserverPlayerAspectToJSON
-} from "./";
+import { GameserverPlayerAspect, GameserverPlayerAspectFromJSON, GameserverPlayerAspectToJSON } from "./";
 
 /**
  *

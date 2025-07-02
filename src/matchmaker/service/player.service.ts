@@ -32,7 +32,7 @@ export class PlayerService {
           this.playerApi.playerControllerGetDodgeList(steamId),
         ]);
 
-        if (summary.session?.serverUrl) {
+        if (summary.session) {
           throw new Error("Can't queue while in game");
         }
 

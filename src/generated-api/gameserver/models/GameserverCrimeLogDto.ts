@@ -16,11 +16,9 @@ import { exists } from "../runtime";
 import {
   GameserverBanReason,
   GameserverBanReasonFromJSON,
-  GameserverBanReasonFromJSONTyped,
   GameserverBanReasonToJSON,
   GameserverMatchmakingMode,
   GameserverMatchmakingModeFromJSON,
-  GameserverMatchmakingModeFromJSONTyped,
   GameserverMatchmakingModeToJSON
 } from "./";
 
