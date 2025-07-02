@@ -71,6 +71,7 @@ export async function mockSummary(
             serverUrl: "",
             matchId: 432,
             lobbyType: MatchmakingMode.LOBBY,
+            abandoned: false,
           }
         : undefined,
       calibrationGamesLeft: 0,
