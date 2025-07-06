@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@dota2classic/nest_logger": "0.0.10",
+    "@golevelup/nestjs-rabbitmq": "^6.0.1",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.3.0",
     "@nestjs/core": "^10.0.0",

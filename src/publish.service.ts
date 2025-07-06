@@ -15,6 +15,7 @@ import { ReadyStateUpdatedEvent } from "@/gateway/events/ready-state-updated.eve
 import { RoomReadyEvent } from "@/gateway/events/room-ready.event";
 import { RoomNotReadyEvent } from "@/gateway/events/room-not-ready.event";
 import { PlayerDeclinedGameEvent } from "@/gateway/events/mm/player-declined-game.event";
+import { AmqpConnection } from "@golevelup/nestjs-rabbitmq";
 
 @Injectable()
 export class PublishService implements OnApplicationBootstrap {
@@ -24,7 +25,7 @@ export class PublishService implements OnApplicationBootstrap {
     private readonly ebus: EventBus,
     private readonly qbus: QueryBus,
     @Inject("RedisQueue") private readonly redisEventQueue: ClientProxy,
-    @Inject("RMQ") private readonly rabbitQueue: ClientProxy,
+    private readonly amqpConnection: AmqpConnection,
   ) {}
 
   async onApplicationBootstrap() {
@@ -33,17 +34,13 @@ export class PublishService implements OnApplicationBootstrap {
   }
 
   private async rabbitEvents() {
-    try {
-      await this.rabbitQueue.connect();
-    } catch (e) {
-      this.logger.warn("Error connecting to rabbit", e);
-    }
-
-    const publicEvents: any[] = [RoomReadyEvent, PlayerDeclinedGameEvent];
+    const publicEvents: any[] = [RoomReadyEvent];
 
     this.ebus
       .pipe(ofType(...publicEvents))
-      .subscribe((t) => this.rabbitQueue.emit("RMQ" + t.constructor.name, t));
+      .subscribe((t) =>
+        this.amqpConnection.publish("app.events", t.constructor.name, t),
+      );
   }
 
   private async redisEvents() {

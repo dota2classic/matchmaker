@@ -6,14 +6,10 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm";
 import { CqrsModule } from "@nestjs/cqrs";
 import { ScheduleModule } from "@nestjs/schedule";
-import {
-  ClientsModule,
-  RedisOptions,
-  RmqOptions,
-  Transport,
-} from "@nestjs/microservices";
+import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
 import { MetricsModule } from "./metrics/metrics.module";
 import { getTypeormConfig } from "@/config/typeorm.config";
+import { RabbitMQConfig, RabbitMQModule } from "@golevelup/nestjs-rabbitmq";
 
 @Module({
   imports: [
@@ -52,33 +48,23 @@ import { getTypeormConfig } from "@/config/typeorm.config";
         inject: [ConfigService],
         imports: [],
       },
-      {
-        name: "RMQ",
-        useFactory(config: ConfigService): RmqOptions {
-          return {
-            transport: Transport.RMQ,
-            options: {
-              urls: [
-                {
-                  hostname: config.get<string>("rabbitmq.host"),
-                  port: config.get<number>("rabbitmq.port"),
-                  protocol: "amqp",
-                  username: config.get<string>("rabbitmq.user"),
-                  password: config.get<string>("rabbitmq.password"),
-                },
-              ],
-              queue: config.get<string>("rabbitmq.matchmaker_events"),
-              queueOptions: {
-                durable: true,
-              },
-              prefetchCount: 5,
-            },
-          };
-        },
-        inject: [ConfigService],
-        imports: [],
-      },
     ]),
+    RabbitMQModule.forRootAsync({
+      useFactory(config: ConfigService): RabbitMQConfig {
+        return {
+          exchanges: [
+            {
+              name: "app.events",
+              type: "topic",
+            },
+          ],
+          enableControllerDiscovery: true,
+          uri: `amqp://${config.get("rabbitmq.user")}:${config.get("rabbitmq.password")}@${config.get("rabbitmq.host")}:${config.get("rabbitmq.port")}`,
+        };
+      },
+      imports: [],
+      inject: [ConfigService],
+    }),
     MetricsModule,
   ],
   controllers: [],
