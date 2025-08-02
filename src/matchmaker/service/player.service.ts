@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { QueryBus } from "@nestjs/cqrs";
 import { DataSource, Repository } from "typeorm";
@@ -10,6 +10,11 @@ import {
   PlayerApi,
 } from "@/generated-api/gameserver";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
+import { ClientProxy } from "@nestjs/microservices";
+import { GetUserInfoQuery } from "@/gateway/queries/GetUserInfo/get-user-info.query";
+import { GetUserInfoQueryResult } from "@/gateway/queries/GetUserInfo/get-user-info-query.result";
+import { PlayerId } from "@/gateway/shared-types/player-id";
+import { Role } from "@/gateway/shared-types/roles";
 
 @Injectable()
 export class PlayerService {
@@ -19,6 +24,7 @@ export class PlayerService {
     private readonly partyRepository: Repository<Party>,
     private readonly playerApi: PlayerApi,
     private readonly ds: DataSource,
+    @Inject("RedisQueue") private readonly redisEventQueue: ClientProxy,
   ) {}
 
   async preparePartyForQueue(party: Party, modes: MatchmakingMode[]) {
@@ -26,10 +32,16 @@ export class PlayerService {
 
     const resolvedScores = await Promise.all(
       plrs.map(async (steamId) => {
-        const [summary, ban, dodgeList] = await Promise.combine([
+        const [summary, ban, dodgeList, userinfo] = await Promise.combine([
           this.playerApi.playerControllerPlayerSummary(steamId),
           this.playerApi.playerControllerBanInfo(steamId),
           this.playerApi.playerControllerGetDodgeList(steamId),
+          this.redisEventQueue
+            .send<
+              GetUserInfoQueryResult,
+              GetUserInfoQuery
+            >(GetUserInfoQuery.name, new GetUserInfoQuery(new PlayerId(steamId)))
+            .toPromise(),
         ]);
 
         if (summary.session) {
@@ -57,9 +69,15 @@ export class PlayerService {
           summary.season.games,
         );
 
+        const dodgeListSteamIds =
+          (userinfo &&
+            userinfo.roles.includes(Role.OLD) &&
+            dodgeList.map((t) => t.steamId)) ||
+          [];
+
         return {
           score,
-          dodgeList: dodgeList.map((t) => t.steamId),
+          dodgeList: dodgeListSteamIds,
           steamId,
         };
       }),
