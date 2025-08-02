@@ -17,7 +17,7 @@ import { Constructor, EventBus } from "@nestjs/cqrs";
 import { DotaTeam } from "@/gateway/shared-types/dota-team";
 import { INestMicroservice } from "@nestjs/common";
 import { RedisContainer, StartedRedisContainer } from "@testcontainers/redis";
-import { Transport } from "@nestjs/microservices";
+import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
 import { EntityClassOrSchema } from "@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type";
 import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
 import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
@@ -32,6 +32,7 @@ import { ConfigModule } from "@nestjs/config";
 import "@/util/promise";
 import { GenericContainer, StartedTestContainer } from "testcontainers";
 import axios from "axios";
+import { PlayerService } from "@/matchmaker/service/player.service";
 import SpyInstance = jest.SpyInstance;
 
 export interface TestEnvironment {
@@ -130,6 +131,25 @@ export function useFullModule(): TestEnvironment {
             }),
           ],
         }),
+        ClientsModule.registerAsync({
+          clients: [
+            {
+              name: "RedisQueue",
+              useFactory(): RedisOptions {
+                return {
+                  transport: Transport.REDIS,
+                  options: {
+                    host: te.containers.redis.getHost(),
+                    password: te.containers.redis.getPassword(),
+                  },
+                };
+              },
+              inject: [],
+              imports: [],
+            },
+          ],
+          isGlobal: true,
+        }),
         TypeOrmModule.forRoot({
           host: te.containers.pg.getHost(),
           port: te.containers.pg.getFirstMappedPort(),
@@ -175,6 +195,8 @@ export function useFullModule(): TestEnvironment {
         lastCheckTimestamp: new Date("2011-10-05T14:48:00.000Z"),
       },
     );
+
+    te.service(PlayerService)["getIsSubscriber"] = () => Promise.resolve(false);
 
     // Mocks:
   });

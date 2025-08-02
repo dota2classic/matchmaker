@@ -27,21 +27,27 @@ export class PlayerService {
     @Inject("RedisQueue") private readonly redisEventQueue: ClientProxy,
   ) {}
 
+  private async getIsSubscriber(steamId: string): Promise<boolean> {
+    const userInfo = await this.redisEventQueue
+      .send<
+        GetUserInfoQueryResult,
+        GetUserInfoQuery
+      >(GetUserInfoQuery.name, new GetUserInfoQuery(new PlayerId(steamId)))
+      .toPromise();
+
+    return userInfo ? userInfo.roles.includes(Role.OLD) : false;
+  }
+
   async preparePartyForQueue(party: Party, modes: MatchmakingMode[]) {
     const plrs = party.players.map((it) => it.steamId);
 
     const resolvedScores = await Promise.all(
       plrs.map(async (steamId) => {
-        const [summary, ban, dodgeList, userinfo] = await Promise.combine([
+        const [summary, ban, dodgeList, isSubscriber] = await Promise.combine([
           this.playerApi.playerControllerPlayerSummary(steamId),
           this.playerApi.playerControllerBanInfo(steamId),
           this.playerApi.playerControllerGetDodgeList(steamId),
-          this.redisEventQueue
-            .send<
-              GetUserInfoQueryResult,
-              GetUserInfoQuery
-            >(GetUserInfoQuery.name, new GetUserInfoQuery(new PlayerId(steamId)))
-            .toPromise(),
+          this.getIsSubscriber(steamId),
         ]);
 
         if (summary.session) {
@@ -69,11 +75,9 @@ export class PlayerService {
           summary.season.games,
         );
 
-        const dodgeListSteamIds =
-          (userinfo &&
-            userinfo.roles.includes(Role.OLD) &&
-            dodgeList.map((t) => t.steamId)) ||
-          [];
+        const dodgeListSteamIds = isSubscriber
+          ? dodgeList.map((t) => t.steamId)
+          : [];
 
         return {
           score,

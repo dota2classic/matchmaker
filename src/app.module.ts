@@ -33,22 +33,25 @@ import { RabbitMQConfig, RabbitMQModule } from "@golevelup/nestjs-rabbitmq";
     }),
     MatchmakerModule,
     ScheduleModule.forRoot(),
-    ClientsModule.registerAsync([
-      {
-        name: "RedisQueue",
-        useFactory(config: ConfigService): RedisOptions {
-          return {
-            transport: Transport.REDIS,
-            options: {
-              host: config.get("redis.host"),
-              password: config.get("redis.password"),
-            },
-          };
+    ClientsModule.registerAsync({
+      clients: [
+        {
+          name: "RedisQueue",
+          useFactory(config: ConfigService): RedisOptions {
+            return {
+              transport: Transport.REDIS,
+              options: {
+                host: config.get("redis.host"),
+                password: config.get("redis.password"),
+              },
+            };
+          },
+          inject: [ConfigService],
+          imports: [],
         },
-        inject: [ConfigService],
-        imports: [],
-      },
-    ]),
+      ],
+      isGlobal: true,
+    }),
     RabbitMQModule.forRootAsync({
       useFactory(config: ConfigService): RabbitMQConfig {
         return {
