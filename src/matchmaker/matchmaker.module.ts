@@ -23,6 +23,7 @@ import { ReadyStateReceivedHandler } from "@/matchmaker/event-handler/ready-stat
 import { MatchmakerApiController } from "@/matchmaker/matchmaker-api.controller";
 import { Configuration, PlayerApi } from "@/generated-api/gameserver";
 import { ConfigService } from "@nestjs/config";
+import { RmqController } from "@/matchmaker/rmq.controller";
 
 const EventHandlers = [
   PlayerEnterQueueRequestedHandler,
@@ -41,7 +42,7 @@ const QueryHandlers = [
 ];
 
 @Module({
-  controllers: [MatchmakerController, MatchmakerApiController],
+  controllers: [MatchmakerController, MatchmakerApiController, RmqController],
   imports: [TypeOrmModule.forFeature(Entities), CqrsModule],
   providers: [
     PartyService,
