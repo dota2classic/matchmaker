@@ -1,4 +1,7 @@
-import { RabbitSubscribe } from "@golevelup/nestjs-rabbitmq";
+import {
+  MessageHandlerErrorBehavior,
+  RabbitSubscribe,
+} from "@golevelup/nestjs-rabbitmq";
 import { ConfigService } from "@nestjs/config";
 import { CommandBus, EventBus } from "@nestjs/cqrs";
 import { Controller, Logger } from "@nestjs/common";
@@ -22,6 +25,7 @@ export class RmqController {
     exchange: "app.events",
     routingKey: MatchFailedEvent.name,
     queue: `matchmaker-queue.${MatchFailedEvent.name}`,
+    errorBehavior: MessageHandlerErrorBehavior.ACK, // its not that important
   })
   async MatchFailedEvent(data: MatchFailedEvent) {
     this.logger.log("MatchFailedEvent", data);
