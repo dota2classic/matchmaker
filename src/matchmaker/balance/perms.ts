@@ -20,27 +20,38 @@ const passesPredicates = (
   );
 };
 
-function* subsetPairs(parties: Party[]): Generator<[Party[], Party[]]> {
+function* subsetPairs(parties: Party[]): Generator<[Team, Team]> {
   const n = parties.length;
-  const totalCombinations = 1 << n; // 2^n possible subsets
 
-  // Ensure first party is always in group A to avoid mirrored duplicates
-  for (let mask = 1; mask < totalCombinations - 1; mask++) {
-    if ((mask & 1) === 0) continue;
-
-    const groupA: Party[] = [];
-    const groupB: Party[] = [];
-
-    for (let i = 0; i < n; i++) {
-      if (mask & (1 << i)) {
-        groupA.push(parties[i]);
-      } else {
-        groupB.push(parties[i]);
+  function* backtrack(
+    index: number,
+    left: Party[],
+    right: Party[],
+  ): Generator<[Team, Team]> {
+    if (index === n) {
+      if (left.length > 0 && right.length > 0) {
+        yield [left.slice(), right.slice()];
       }
+      return;
     }
 
-    yield [groupA, groupB];
+    const party = parties[index];
+
+    // Option 1: put in left
+    left.push(party);
+    yield* backtrack(index + 1, left, right);
+    left.pop();
+
+    // Option 2: put in right
+    right.push(party);
+    yield* backtrack(index + 1, left, right);
+    right.pop();
+
+    // Option 3: leave unused
+    yield* backtrack(index + 1, left, right);
   }
+
+  yield* backtrack(0, [], []);
 }
 
 function bestGame(
