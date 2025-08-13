@@ -3,6 +3,7 @@ import { Party } from "@/matchmaker/entity/party";
 import { v4 } from "uuid";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { testUser } from "@/test/useFullModule";
+import { FixedTeamSizePredicate } from "@/util/predicates";
 
 describe("permutations", () => {
   const fakeParty = (...users: string[]) => {
@@ -40,8 +41,21 @@ describe("permutations", () => {
 
   it("should find 1x1", () => {
     const parties = [fakeParty(testUser()), fakeParty(testUser())];
-    const m = findBestMatchBy(parties, 1, balanceFunction, 1000);
+    const m = findBestMatchBy(parties, balanceFunction, 1000, [
+      FixedTeamSizePredicate(1),
+    ]);
 
     expect(m).toBeDefined();
+  });
+
+  it("should find even balanced game", () => {
+    const parties = [
+      fakeParty(testUser()),
+      fakeParty(testUser()),
+      fakeParty(testUser()),
+      fakeParty(testUser()),
+    ];
+
+    // findBestMatchBy(parties, )
   });
 });

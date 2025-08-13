@@ -15,6 +15,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
   DodgeListPredicate,
+  FixedTeamSizePredicate,
   MakeMaxPlayerScoreDeviationPredicate,
   MakeMaxScoreDifferencePredicate,
 } from "@/util/predicates";
@@ -237,10 +238,10 @@ export class QueueService implements OnApplicationBootstrap {
 
     const bestMatch = findBestMatchBy(
       pool,
-      teamSize,
       this.balanceFunction,
       timeLimit, // Max 5 seconds to find a game
       [
+        FixedTeamSizePredicate(teamSize),
         MakeMaxScoreDifferencePredicate(maxTeamScoreDifference),
         MakeMaxPlayerScoreDeviationPredicate(maxPlayerScoreDifference),
         DodgeListPredicate,
@@ -302,9 +303,9 @@ export class QueueService implements OnApplicationBootstrap {
     // If we have a pair party, match them
     const bestMatch = findBestMatchBy(
       pool,
-      1,
       this.balanceFunction,
-      2000, // Max 5 seconds to find a game
+      2000, // Max 5 seconds to find a game,
+      [FixedTeamSizePredicate(1)],
     );
 
     if (bestMatch === undefined) {
@@ -327,6 +328,14 @@ export class QueueService implements OnApplicationBootstrap {
     const entries = takeWhileNotDodged(pool, 5);
 
     return new GameBalance(mode, entries, []);
+  }
+
+  private async findFastEvenGame(mode: MatchmakingMode, _pool: Party[]) {
+    const pool = [..._pool]
+      .sort((a, b) => b.queueTime - a.queueTime)
+      .slice(0, 10);
+
+    if (pool.length <= 1) return undefined;
   }
 
   async onApplicationBootstrap() {

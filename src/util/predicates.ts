@@ -17,6 +17,12 @@ export const isDodgeListViable = (team: Team) => {
 
 export type BalancePredicate = (t1: Team, t2: Team, score: number) => boolean;
 
+export const FixedTeamSizePredicate = (teamSize: number): BalancePredicate => {
+  return (left, right) =>
+    left.reduce((a, b) => a + b.size, 0) === teamSize &&
+    right.reduce((a, b) => a + b.size, 0) === teamSize;
+};
+
 export const DodgeListPredicate: BalancePredicate = (t1, t2) => {
   return isDodgeListViable(t1) && isDodgeListViable(t2);
 };

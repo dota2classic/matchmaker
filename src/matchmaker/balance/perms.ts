@@ -9,6 +9,17 @@ export interface BalancePair {
   right: Team;
 }
 
+const passesPredicates = (
+  left: Party[],
+  right: Party[],
+  score: number,
+  predicates: BalancePredicate[],
+) => {
+  return (
+    predicates.findIndex((predicate) => !predicate(left, right, score)) === -1
+  );
+};
+
 function* subsetSum(
   pool: Party[],
   target: number,
@@ -32,51 +43,66 @@ function* subsetSum(
   }
 }
 
+function* subsetPairs(parties: Party[]): Generator<[Party[], Party[]]> {
+  const n = parties.length;
+  const totalCombinations = 1 << n; // 2^n possible subsets
+
+  // Ensure first party is always in group A to avoid mirrored duplicates
+  for (let mask = 1; mask < totalCombinations - 1; mask++) {
+    if ((mask & 1) === 0) continue;
+
+    const groupA: Party[] = [];
+    const groupB: Party[] = [];
+
+    for (let i = 0; i < n; i++) {
+      if (mask & (1 << i)) {
+        groupA.push(parties[i]);
+      } else {
+        groupB.push(parties[i]);
+      }
+    }
+
+    yield [groupA, groupB];
+  }
+}
+
 export function findBestMatchBy(
   pool: Party[],
-  target: number,
   func: (left: Team, right: Team) => number,
   timeLimitation: number,
   predicates: BalancePredicate[] = [],
 ): BalancePair | undefined {
+  return bestGame(subsetPairs(pool), func, timeLimitation, predicates);
+}
+
+function bestGame(
+  combinations: Generator<[Party[], Party[]]>,
+  func: (left: Team, right: Team) => number,
+  timeLimitation: number,
+  predicates: BalancePredicate[] = [],
+) {
   const timeStarted = performance.now();
 
   let bestScore = Number.MAX_SAFE_INTEGER;
   let bestPair: BalancePair | undefined = undefined;
 
-  const leftG = subsetSum(pool, target);
-  for (const left of leftG) {
-    const subpool = pool.filter(
-      (t) => left.findIndex((leftParty) => leftParty.id === t.id) === -1,
-    );
+  for (const [left, right] of combinations) {
+    const score = func(left, right);
 
-    const rightG = subsetSum(subpool, target);
+    if (!passesPredicates(left, right, score, predicates)) {
+      continue;
+    }
 
-    for (const right of rightG) {
-      const score = func(left, right);
-
-      let predicatesPassed = true;
-      for (const predicate of predicates) {
-        if (!predicate(left, right, score)) {
-          predicatesPassed = false;
-          break;
-        }
-      }
-
-      if (!predicatesPassed) {
-        continue;
-      }
-
-      if (score < bestScore) {
-        bestScore = score;
-        bestPair = { left, right };
-      }
-      const time = performance.now() - timeStarted;
-      if (time > timeLimitation) {
-        // We have to quit now
-        return bestPair;
-      }
+    if (score < bestScore) {
+      bestScore = score;
+      bestPair = { left, right };
+    }
+    const time = performance.now() - timeStarted;
+    if (time > timeLimitation) {
+      // We have to quit now
+      return bestPair;
     }
   }
+
   return bestPair;
 }
