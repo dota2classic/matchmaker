@@ -27,6 +27,37 @@ describe("QueueService", () => {
     await te.repo(Party).update({ inQueue: true }, { inQueue: false });
   });
 
+  it("should find turbo game", async () => {
+    // given
+    const p1 = await createParty(
+      te,
+      [MatchmakingMode.TURBO],
+      [testUser(), testUser()],
+      true,
+    );
+    const p2 = await createParty(
+      te,
+      [MatchmakingMode.TURBO],
+      [testUser()],
+      true,
+    );
+
+    // when
+    await qs.cycle(MatchmakingMode.TURBO);
+
+    // then
+    expect(te.ebusSpy).toReceiveCall(
+      expect.objectContaining({
+        id: expect.any(String),
+        balance: expect.objectContaining({
+          mode: MatchmakingMode.TURBO,
+          left: expect.any(Array),
+          right: expect.any(Array),
+        } satisfies DeepPartial<GameBalance>),
+      } satisfies DeepPartial<RoomCreatedEvent>),
+    );
+  });
+
   it("should find SOLOMID game", async () => {
     // given
     const p1 = await createParty(

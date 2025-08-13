@@ -20,29 +20,6 @@ const passesPredicates = (
   );
 };
 
-function* subsetSum(
-  pool: Party[],
-  target: number,
-  partial: Party[] = [],
-): Generator<Party[]> {
-  const plrCount = partial.reduce((a, x) => a + x.size, 0);
-
-  // check if the partial sum is equals to target
-  if (plrCount === target) {
-    // total.push(partial);
-    yield partial;
-  }
-  if (plrCount >= target) {
-    return; // if we reach the number why bother to continue
-  }
-
-  for (let i = 0; i < pool.length; i++) {
-    const n = pool[i];
-    const remaining = pool.slice(i + 1);
-    yield* subsetSum(remaining, target, partial.concat([n]));
-  }
-}
-
 function* subsetPairs(parties: Party[]): Generator<[Party[], Party[]]> {
   const n = parties.length;
   const totalCombinations = 1 << n; // 2^n possible subsets
@@ -64,15 +41,6 @@ function* subsetPairs(parties: Party[]): Generator<[Party[], Party[]]> {
 
     yield [groupA, groupB];
   }
-}
-
-export function findBestMatchBy(
-  pool: Party[],
-  func: (left: Team, right: Team) => number,
-  timeLimitation: number,
-  predicates: BalancePredicate[] = [],
-): BalancePair | undefined {
-  return bestGame(subsetPairs(pool), func, timeLimitation, predicates);
 }
 
 function bestGame(
@@ -105,4 +73,13 @@ function bestGame(
   }
 
   return bestPair;
+}
+
+export function findBestMatchBy(
+  pool: Party[],
+  func: (left: Team, right: Team) => number,
+  timeLimitation: number,
+  predicates: BalancePredicate[] = [],
+): BalancePair | undefined {
+  return bestGame(subsetPairs(pool), func, timeLimitation, predicates);
 }

@@ -3,16 +3,20 @@ import { Party } from "@/matchmaker/entity/party";
 import { v4 } from "uuid";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { testUser } from "@/test/useFullModule";
-import { FixedTeamSizePredicate } from "@/util/predicates";
+import {
+  FixedTeamSizePredicate,
+  MaxTeamSizeDifference,
+} from "@/util/predicates";
 
 describe("permutations", () => {
-  const fakeParty = (...users: string[]) => {
+  const fakeParty = (score: number, ...users: string[]) => {
     const p = new Party();
     p.id = v4();
     p.players = users.map(
       (usr, idx) => new PlayerInParty(usr, p.id, idx === 0),
     );
     p.enterQueueAt = new Date();
+    p.score = score;
 
     return p;
   };
@@ -40,7 +44,7 @@ describe("permutations", () => {
   };
 
   it("should find 1x1", () => {
-    const parties = [fakeParty(testUser()), fakeParty(testUser())];
+    const parties = [fakeParty(100, testUser()), fakeParty(100, testUser())];
     const m = findBestMatchBy(parties, balanceFunction, 1000, [
       FixedTeamSizePredicate(1),
     ]);
@@ -50,12 +54,19 @@ describe("permutations", () => {
 
   it("should find even balanced game", () => {
     const parties = [
-      fakeParty(testUser()),
-      fakeParty(testUser()),
-      fakeParty(testUser()),
-      fakeParty(testUser()),
+      fakeParty(9000, testUser()),
+      fakeParty(4500, testUser()),
+      fakeParty(4500, testUser()),
+      fakeParty(1000, testUser()),
     ];
 
-    // findBestMatchBy(parties, )
+    const m = findBestMatchBy(parties, balanceFunction, 1000, [
+      MaxTeamSizeDifference(0),
+    ]);
+    expect(m).toBeDefined();
+    expect(m!.left).toHaveLength(2);
+    expect(m!.right).toHaveLength(2);
+
+    expect(balanceFunction(m!.left, m!.right)).toBeLessThan(2000);
   });
 });

@@ -23,6 +23,16 @@ export const FixedTeamSizePredicate = (teamSize: number): BalancePredicate => {
     right.reduce((a, b) => a + b.size, 0) === teamSize;
 };
 
+export const MaxTeamSizeDifference = (
+  maxDifference: number,
+): BalancePredicate => {
+  return (left, right) =>
+    Math.abs(
+      left.reduce((a, b) => a + b.size, 0) -
+        right.reduce((a, b) => a + b.size, 0),
+    ) <= maxDifference;
+};
+
 export const DodgeListPredicate: BalancePredicate = (t1, t2) => {
   return isDodgeListViable(t1) && isDodgeListViable(t2);
 };
