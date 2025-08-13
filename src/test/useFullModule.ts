@@ -189,7 +189,13 @@ export function useFullModule(): TestEnvironment {
     te.ebus = te.module.get(EventBus);
     te.ebusSpy = jest.spyOn(te.ebus, "publish");
 
-    await te.repo<QueueSettings>(QueueSettings).update(
+    const qs = await te.repo<QueueSettings>(QueueSettings);
+
+    await qs.insert({
+      mode: MatchmakingMode.TURBO,
+    });
+
+    await qs.update(
       { checkInterval: MoreThan(-1) },
       {
         lastCheckTimestamp: new Date("2011-10-05T14:48:00.000Z"),

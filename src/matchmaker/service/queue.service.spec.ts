@@ -32,7 +32,7 @@ describe("QueueService", () => {
     const p1 = await createParty(
       te,
       [MatchmakingMode.TURBO],
-      [testUser(), testUser()],
+      [testUser()],
       true,
     );
     const p2 = await createParty(
