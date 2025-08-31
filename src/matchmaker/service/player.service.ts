@@ -54,8 +54,17 @@ export class PlayerService {
           throw new Error("Can't queue while in game");
         }
 
-        if (ban.isBanned) {
+        if (ban.isBanned && modes.includes(MatchmakingMode.UNRANKED)) {
           throw new Error("Can't queue when banned");
+        }
+
+        if (
+          ban.isBanned &&
+          new Date(ban.bannedUntil).getTime() >
+            Date.now() + 1000 * 60 * 60 * 24 * 365
+        ) {
+          // It's perma ban
+          throw new Error("Perma banned");
         }
 
         // highroom tmp check
