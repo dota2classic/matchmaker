@@ -32,7 +32,7 @@ export class RmqController {
     const jobs = data.goodParties.map(async (partyId) => {
       const party = await this.partyService.getParty(partyId);
       if (party) {
-        await this.queue.enterQueue(party);
+        await this.queue.enterQueue(party, party.queueModes, false);
       }
     });
     await Promise.all(jobs);
