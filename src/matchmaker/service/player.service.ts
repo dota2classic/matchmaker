@@ -36,6 +36,9 @@ export class PlayerService {
         GetUserInfoQuery
       >(GetUserInfoQuery.name, new GetUserInfoQuery(new PlayerId(steamId)))
       .toPromise();
+    this.logger.log(
+      `Resolve subscription status of ${steamId}: ${userInfo?.roles}`,
+    );
 
     return userInfo ? userInfo.roles.includes(Role.OLD) : false;
   }
