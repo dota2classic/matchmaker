@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { QueryBus } from "@nestjs/cqrs";
 import { DataSource, Repository } from "typeorm";
@@ -18,6 +18,8 @@ import { Role } from "@/gateway/shared-types/roles";
 
 @Injectable()
 export class PlayerService {
+  private logger = new Logger(PlayerService.name);
+
   constructor(
     private readonly qbus: QueryBus,
     @InjectRepository(Party)
@@ -87,6 +89,10 @@ export class PlayerService {
         const dodgeListSteamIds = isSubscriber
           ? dodgeList.map((t) => t.steamId)
           : [];
+
+        this.logger.log(
+          `Player ${steamId} is subscriber: ${isSubscriber}, dodgeList: ${dodgeListSteamIds}`,
+        );
 
         return {
           score,
