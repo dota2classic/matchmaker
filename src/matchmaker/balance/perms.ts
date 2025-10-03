@@ -20,14 +20,14 @@ const passesPredicates = (
   );
 };
 
-function* subsetPairs(parties: Party[]): Generator<[Team, Team]> {
+export function* subsetPairs<T>(parties: T[]): Generator<[T[], T[]]> {
   const n = parties.length;
 
   function* backtrack(
     index: number,
-    left: Party[],
-    right: Party[],
-  ): Generator<[Team, Team]> {
+    left: T[],
+    right: T[],
+  ): Generator<[T[], T[]]> {
     if (index === n) {
       if (left.length > 0 && right.length > 0) {
         yield [left.slice(), right.slice()];
