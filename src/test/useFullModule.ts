@@ -33,7 +33,26 @@ import "@/util/promise";
 import { GenericContainer, StartedTestContainer } from "testcontainers";
 import axios from "axios";
 import { PlayerService } from "@/matchmaker/service/player.service";
+import { v4 } from "uuid";
 import SpyInstance = jest.SpyInstance;
+
+export const fakeParty = (
+  score: number,
+  users: string[] = [testUser()],
+  enterQueueAt = new Date(Date.now() - 60_000),
+) => {
+  const p = new Party();
+  p.id = v4();
+  p.players = users.map((usr, idx) => {
+    const plr = new PlayerInParty(usr, p.id, idx === 0);
+    plr.score = score / users.length;
+    return plr;
+  });
+  p.enterQueueAt = enterQueueAt;
+  p.score = score;
+
+  return p;
+};
 
 export interface TestEnvironment {
   module: TestingModule;

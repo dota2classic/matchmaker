@@ -1,33 +1,25 @@
 import { findBestMatchBy } from "@/matchmaker/balance/perms";
 import { Party } from "@/matchmaker/entity/party";
-import { v4 } from "uuid";
-import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
-import { testUser } from "@/test/useFullModule";
+import { fakeParty } from "@/test/useFullModule";
 import {
   FixedTeamSizePredicate,
   MaxTeamSizeDifference,
 } from "@/util/predicates";
 import {
+  balanceFunctionLogWaitingTime,
   balanceFunctionTakeMost,
-  balanceFunctionV1,
 } from "@/matchmaker/balance/balance-functions";
 
 describe("permutations", () => {
-  const fakeParty = (score: number, ...users: string[]) => {
-    const p = new Party();
-    p.id = v4();
-    p.players = users.map(
-      (usr, idx) => new PlayerInParty(usr, p.id, idx === 0),
-    );
-    p.enterQueueAt = new Date();
-    p.score = score;
-
-    return p;
-  };
+  // it("should find all possible combinations", () => {
+  //   const parties = [1,2,3,4,5,6,7,8,9,10];
+  //   const combos = Array.from(subsetPairs(parties));
+  //   console.log(combos.filter(t => t[0].length === 5 && t[1].length === 5));
+  // });
 
   it("should find 1x1", () => {
-    const parties = [fakeParty(100, testUser()), fakeParty(100, testUser())];
-    const m = findBestMatchBy(parties, balanceFunctionV1, 1000, [
+    const parties = [fakeParty(100), fakeParty(100)];
+    const m = findBestMatchBy(parties, balanceFunctionLogWaitingTime, 1000, [
       FixedTeamSizePredicate(1),
     ]);
 
@@ -36,10 +28,10 @@ describe("permutations", () => {
 
   it("should find even balanced game while taking as much players as possible", () => {
     const parties = [
-      fakeParty(9000, testUser()),
-      fakeParty(4500, testUser()),
-      fakeParty(4500, testUser()),
-      fakeParty(1000, testUser()),
+      fakeParty(9000),
+      fakeParty(4500),
+      fakeParty(4500),
+      fakeParty(1000),
     ];
 
     const m = findBestMatchBy(parties, balanceFunctionTakeMost, 1000, [
@@ -49,7 +41,7 @@ describe("permutations", () => {
     expect(m!.left).toHaveLength(2);
     expect(m!.right).toHaveLength(2);
 
-    expect(balanceFunctionV1(m!.left, m!.right)).toBeLessThan(2000);
+    expect(balanceFunctionLogWaitingTime(m!.left, m!.right)).toBeLessThan(2000);
   });
 
   it("should find game from this", () => {
@@ -264,7 +256,7 @@ describe("permutations", () => {
       return t;
     }) as any;
 
-    const some = findBestMatchBy(pool, balanceFunctionV1, 5000, [
+    const some = findBestMatchBy(pool, balanceFunctionLogWaitingTime, 5000, [
       FixedTeamSizePredicate(5),
       // MakeMaxScoreDifferencePredicate(maxTeamScoreDifference),
       // MakeMaxPlayerScoreDeviationPredicate(maxPlayerScoreDifference),

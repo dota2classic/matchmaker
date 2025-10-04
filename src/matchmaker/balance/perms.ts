@@ -1,6 +1,9 @@
 import { performance } from "perf_hooks";
 import { Party } from "@/matchmaker/entity/party";
 import { BalancePredicate } from "@/util/predicates";
+import { Logger } from "@nestjs/common";
+
+const logger = new Logger("Permutations");
 
 export type Team = Party[];
 
@@ -78,6 +81,7 @@ function bestGame(
     }
     const time = performance.now() - timeStarted;
     if (time > timeLimitation) {
+      logger.log("Exceeded time limitation: exiting early", time);
       // We have to quit now
       return bestPair;
     }

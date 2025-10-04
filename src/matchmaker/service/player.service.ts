@@ -158,7 +158,7 @@ export class PlayerService {
     const winrateFactor = recentWinrate + BASELINE_WINRATE;
 
     // TODO: REMOVE THIS! JUST AN EXPERIMENT!!
-    const calibrationFactor = gamesPlayed < 10 && mmr < 3000 ? 0.8 : 1;
+    const calibrationFactor = gamesPlayed < 10 && mmr < 3000 ? 0.5 : 1;
 
     return mmr * winrateFactor * experienceFactor * calibrationFactor;
   };

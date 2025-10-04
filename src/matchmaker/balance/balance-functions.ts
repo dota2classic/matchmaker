@@ -13,7 +13,7 @@ const getPartyWaitingScore = (party: BalanceEntity) => {
   return party.queueTimeMillis / 100;
 };
 
-export const balanceFunctionV1 = (
+export const balanceFunctionLogWaitingTime = (
   left: BalanceEntity[],
   right: BalanceEntity[],
 ) => {
@@ -38,7 +38,7 @@ export const balanceFunctionV1 = (
   return comp1 + avgDiff;
 };
 
-export const balanceFunctionV2 = (
+export const balanceFunctionMultWaitingTime = (
   left: BalanceEntity[],
   right: BalanceEntity[],
 ) => {
@@ -67,8 +67,13 @@ export const balanceFunctionTakeMost = (
 ) => {
   const playerCount = left.concat(right).reduce((a, b) => a + b.size, 0);
 
-  const W_PLAYER_COUNT = -1000;
+  const W_PLAYER_COUNT = -10000;
 
-  return balanceFunctionV2(left, right) + playerCount * W_PLAYER_COUNT;
-  // return playerCount * W_PLAYER_COUNT;
+
+  // if(left.length == 5 && right.length == 5) {
+  //   console.log(balanceFunctionLogWaitingTime(left, right) + playerCount * W_PLAYER_COUNT, left, right)
+  // }
+
+  // console.log(left.length, right.length, balanceFunctionLogWaitingTime(left, right) + playerCount * W_PLAYER_COUNT)
+  return balanceFunctionLogWaitingTime(left, right) + playerCount * W_PLAYER_COUNT;
 };

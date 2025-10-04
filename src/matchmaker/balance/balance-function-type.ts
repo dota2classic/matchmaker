@@ -1,7 +1,7 @@
 import {
+  balanceFunctionLogWaitingTime,
+  balanceFunctionMultWaitingTime,
   balanceFunctionTakeMost,
-  balanceFunctionV1,
-  balanceFunctionV2,
 } from "@/matchmaker/balance/balance-functions";
 
 export enum BalanceFunctionType {
@@ -11,7 +11,7 @@ export enum BalanceFunctionType {
 }
 
 export const BalanceFunctionMapping = {
-  [BalanceFunctionType.LOG_WAITING_SCORE]: balanceFunctionV1,
-  [BalanceFunctionType.MULT_WAITING_SCORE]: balanceFunctionV2,
+  [BalanceFunctionType.LOG_WAITING_SCORE]: balanceFunctionLogWaitingTime,
+  [BalanceFunctionType.MULT_WAITING_SCORE]: balanceFunctionMultWaitingTime,
   [BalanceFunctionType.OPTIMIZE_PLAYER_COUNT]: balanceFunctionTakeMost,
 };
