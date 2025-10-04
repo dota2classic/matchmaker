@@ -1,6 +1,7 @@
 import { Team } from "@/matchmaker/balance/perms";
 import { totalScore } from "@/util/totalScore";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
+import { Party } from "@/matchmaker/entity/party";
 
 export const isDodgeListViable = (team: Team) => {
   const players = team.flatMap((t) => t.players).map((it) => it.steamId);
@@ -16,6 +17,23 @@ export const isDodgeListViable = (team: Team) => {
 };
 
 export type BalancePredicate = (t1: Team, t2: Team, score: number) => boolean;
+
+export const LongQueuePopPredicate = (pool: Party[], maxQueueTime: number) => {
+  // Take at most 8 oldest players above threshold
+  const guaranteedPlayers = pool
+    .filter((t) => t.queueTimeMillis >= maxQueueTime)
+    .slice(0, 8);
+
+  return (left: Party[], right: Party[]): boolean => {
+    if (guaranteedPlayers.length === 0) return true;
+
+    // Flatten both teams
+    const allParties = new Set([...left, ...right]);
+
+    // Ensure every guaranteed player is present
+    return guaranteedPlayers.every((g) => allParties.has(g));
+  };
+};
 
 export const FixedTeamSizePredicate = (teamSize: number): BalancePredicate => {
   return (left, right) =>

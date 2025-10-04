@@ -1,5 +1,6 @@
 import { Column, Entity, PrimaryColumn } from "typeorm";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
+import { BalanceFunctionType } from "@/matchmaker/balance/balance-function-type";
 
 @Entity("queue_settings")
 export class QueueSettings {
@@ -34,6 +35,15 @@ export class QueueSettings {
     default: 1000000,
   })
   maxTeamScoreDifference: number;
+
+  @Column({
+    name: "balance_function",
+    type: "enum",
+    enum: BalanceFunctionType,
+    enumName: "balance_function_type",
+    default: BalanceFunctionType.LOG_WAITING_SCORE,
+  })
+  balanceFunctionType: BalanceFunctionType;
 
   @Column({
     name: "max_player_score_difference",

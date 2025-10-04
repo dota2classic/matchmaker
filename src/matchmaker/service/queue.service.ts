@@ -16,11 +16,14 @@ import { Repository } from "typeorm";
 import {
   DodgeListPredicate,
   FixedTeamSizePredicate,
+  LongQueuePopPredicate,
   MakeMaxPlayerScoreDeviationPredicate,
   MakeMaxScoreDifferencePredicate,
   MaxTeamSizeDifference,
 } from "@/util/predicates";
 import { takeWhileNotDodged } from "@/util/take-while-not-dodged";
+import { BalanceFunctionMapping } from "@/matchmaker/balance/balance-function-type";
+import { BalanceFunction } from "@/matchmaker/balance/balance-functions";
 
 @Injectable()
 export class QueueService implements OnApplicationBootstrap {
@@ -34,6 +37,7 @@ export class QueueService implements OnApplicationBootstrap {
       findGames: (entries, qs) =>
         this.findBalancedGame(
           entries,
+          BalanceFunctionMapping[qs.balanceFunctionType],
           5,
           5000,
           qs.maxTeamScoreDifference,
@@ -43,7 +47,7 @@ export class QueueService implements OnApplicationBootstrap {
     {
       mode: MatchmakingMode.SOLOMID,
       priority: 100,
-      findGames: (entries) => this.findSolomidGame(entries),
+      findGames: (entries, qs) => this.findSolomidGame(entries, qs),
     },
     {
       mode: MatchmakingMode.BOTS,
@@ -53,14 +57,24 @@ export class QueueService implements OnApplicationBootstrap {
     {
       mode: MatchmakingMode.BOTS_2X2,
       priority: 10,
-      findGames: (entries) =>
-        this.findBalancedGame(entries, 2, 5000, 10e6, 10e6),
+      findGames: (entries, qs) =>
+        this.findBalancedGame(
+          entries,
+          BalanceFunctionMapping[qs.balanceFunctionType],
+          2,
+          5000,
+          10e6,
+          10e6,
+        ),
     },
     {
       mode: MatchmakingMode.TURBO,
       priority: 100,
-      findGames: (entries) =>
-        this.findFastEvenGame(MatchmakingMode.TURBO, entries),
+      findGames: (entries, qs) =>
+        this.findFastEvenGame(
+          BalanceFunctionMapping[qs.balanceFunctionType],
+          entries,
+        ),
     },
     {
       mode: MatchmakingMode.HIGHROOM,
@@ -68,6 +82,7 @@ export class QueueService implements OnApplicationBootstrap {
       findGames: (entries, qs) =>
         this.findBalancedGame(
           entries,
+          BalanceFunctionMapping[qs.balanceFunctionType],
           5,
           5000,
           qs.maxTeamScoreDifference,
@@ -202,6 +217,7 @@ export class QueueService implements OnApplicationBootstrap {
     bc: BalanceConfig,
     qs: QueueSettings,
   ) {
+    const balanceFunction = BalanceFunctionMapping[qs.balanceFunctionType];
     let pool = [...eligible].sort(
       createDateComparator<Party>((it) => it.enterQueueAt!),
     );
@@ -219,7 +235,7 @@ export class QueueService implements OnApplicationBootstrap {
       const { left, right } = foundGame;
 
       this.logger.log(`Found balanced game`, {
-        diff: this.balanceFunction(left, right),
+        diff: balanceFunction(left, right),
         mode: foundGame.mode,
         left: left.reduce((a, b) => a + b.score, 0),
         right: right.reduce((a, b) => a + b.score, 0),
@@ -231,6 +247,7 @@ export class QueueService implements OnApplicationBootstrap {
 
   private async findBalancedGame(
     pool: Party[],
+    balanceFunction: BalanceFunction,
     teamSize: number = 5,
     timeLimit: number = 5000,
     maxTeamScoreDifference: number,
@@ -244,61 +261,35 @@ export class QueueService implements OnApplicationBootstrap {
 
     return findBestMatchBy(
       pool,
-      this.balanceFunction,
+      balanceFunction,
       timeLimit, // Max 5 seconds to find a game
       [
         FixedTeamSizePredicate(teamSize),
         MakeMaxScoreDifferencePredicate(maxTeamScoreDifference),
         MakeMaxPlayerScoreDeviationPredicate(maxPlayerScoreDifference),
+        LongQueuePopPredicate(pool, 1000 * 60 * 20), // At most 20 minutes
         DodgeListPredicate,
       ],
     );
   }
 
-  private getPartyWaitingScore(party: Party) {
-    // 10 seconds = 1 waiting score
-    return party.enterQueueAt
-      ? (Date.now() - party.enterQueueAt.getTime()) / 1000 / 10
-      : 0;
-  }
-
-  private balanceFunction = (left: Party[], right: Party[]) => {
-    const lavg = left.reduce((a, b) => a + b.score, 0) / 5;
-    const ravg = right.reduce((a, b) => a + b.score, 0) / 5;
-    const avgDiff = Math.abs(lavg - ravg);
-
-    let waitingScore = 0;
-    for (let i = 0; i < left.length; i++) {
-      waitingScore += this.getPartyWaitingScore(left[i]);
-    }
-    for (let i = 0; i < right.length; i++) {
-      waitingScore += this.getPartyWaitingScore(right[i]);
-    }
-
-    // We want waitingScore to be highest, so we invert it
-    waitingScore = Math.log(Math.max(1, waitingScore));
-    waitingScore = -waitingScore;
-
-    const comp1 = waitingScore * 100000;
-
-    return comp1 + avgDiff;
-  };
-
   /**
    * Party of 2 players are automatically placed against each other
    */
-  private async findSolomidGame(
+  private findSolomidGame = async (
     pool: Party[],
-  ): Promise<BalancePair | undefined> {
+    qs: QueueSettings,
+  ): Promise<BalancePair | undefined> => {
+    const balanceFunction = BalanceFunctionMapping[qs.balanceFunctionType];
     if (pool.flatMap((it) => it.players).length < 2) return;
     // If we have a pair party, match them
     return findBestMatchBy(
       pool,
-      this.balanceFunction,
+      balanceFunction,
       2000, // Max 5 seconds to find a game,
       [FixedTeamSizePredicate(1)],
     );
-  }
+  };
 
   /**
    * 1 game per party
@@ -314,14 +305,17 @@ export class QueueService implements OnApplicationBootstrap {
     return new GameBalance(mode, entries, []);
   }
 
-  private async findFastEvenGame(mode: MatchmakingMode, _pool: Party[]) {
+  private async findFastEvenGame(
+    balanceFunction: BalanceFunction,
+    _pool: Party[],
+  ) {
     const pool = [..._pool]
-      .sort((a, b) => b.queueTime - a.queueTime)
+      .sort((a, b) => b.queueTimeMillis - a.queueTimeMillis)
       .slice(0, 10);
 
     if (pool.length <= 1) return undefined;
 
-    return findBestMatchBy(pool, this.balanceFunction, 2000, [
+    return findBestMatchBy(pool, balanceFunction, 2000, [
       MaxTeamSizeDifference(1),
       DodgeListPredicate,
     ]);

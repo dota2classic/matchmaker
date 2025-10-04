@@ -78,7 +78,7 @@ export class Party {
     );
   }
 
-  get queueTime(): number {
+  get queueTimeMillis(): number {
     return this.enterQueueAt ? Date.now() - this.enterQueueAt.getTime() : -1;
   }
 }
