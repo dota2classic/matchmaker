@@ -55,7 +55,7 @@ export const balanceFunctionMultWaitingTime = (
   // Weights (tune empirically)
 
   const W_MMR = 1.0;
-  const W_WAIT = -0.0015; // negative -> reward older queues
+  const W_WAIT = -0.005; // negative -> reward older queues
 
   // Lower is better
   return W_MMR * mmrDiff + W_WAIT * avgWait;

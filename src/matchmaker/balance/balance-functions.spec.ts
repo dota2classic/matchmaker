@@ -3,6 +3,7 @@ import { range } from "@/util/range";
 import { findBestMatchBy } from "@/matchmaker/balance/perms";
 import {
   balanceFunctionLogWaitingTime,
+  balanceFunctionMultWaitingTime,
   balanceFunctionTakeMost,
 } from "@/matchmaker/balance/balance-functions";
 import { BalanceFunctionType } from "@/matchmaker/balance/balance-function-type";
@@ -18,7 +19,7 @@ describe("balance functions", () => {
   const uneven = [fakeParty(1000), fakeParty(2000), fakeParty(10000)];
 
   const edgeCaseWithLongWaiting: Party[] = [
-    fakeParty(3000, [testUser()], new Date(Date.now() - 1000 * 60 * 10)),
+    fakeParty(3000, [testUser()], new Date(Date.now() - 1000 * 60 * 20)),
     fakeParty(1000),
     fakeParty(1000),
   ];
@@ -151,5 +152,25 @@ describe("balance functions", () => {
       expect(smaller.map((t) => t.score).sort()).toEqual([1000]);
       expect(bigger.map((t) => t.score).sort()).toEqual([3000]);
     });
+  });
+
+  it("comparison", () => {
+    const pair1 = [[edgeCaseWithLongWaiting[0]], [edgeCaseWithLongWaiting[1]]];
+
+    const pair2 = [[edgeCaseWithLongWaiting[2]], [edgeCaseWithLongWaiting[1]]];
+
+    {
+      const [left, right] = pair1;
+      const score1 = balanceFunctionMultWaitingTime(left, right);
+      const score2 = balanceFunctionLogWaitingTime(left, right);
+      console.log("Long waiting:", score1, score2);
+    }
+
+    {
+      const [left, right] = pair2;
+      const score1 = balanceFunctionMultWaitingTime(left, right);
+      const score2 = balanceFunctionLogWaitingTime(left, right);
+      console.log("Casual waiting:", score1, score2);
+    }
   });
 });
