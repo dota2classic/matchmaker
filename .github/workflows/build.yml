@@ -33,9 +33,11 @@ jobs:
         with:
           cmd: test # will run `yarn test` command
   image:
+    name: Build and push Docker image
     runs-on: ubuntu-latest
     if: ${{ always() && contains(join(needs.*.result, ','), 'success') }}
-    name: Build and push Docker image
+    needs: [ build ]
+
     steps:
       - name: Set short SHA
         id: vars
