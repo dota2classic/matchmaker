@@ -17,9 +17,8 @@ import { Constructor, EventBus } from "@nestjs/cqrs";
 import { DotaTeam } from "@/gateway/shared-types/dota-team";
 import { INestMicroservice } from "@nestjs/common";
 import { RedisContainer, StartedRedisContainer } from "@testcontainers/redis";
-import { Transport } from "@nestjs/microservices";
+import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
 import { EntityClassOrSchema } from "@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type";
-import { testMockQuery } from "@/test/mocks";
 import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
 import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
 import {
@@ -29,7 +28,31 @@ import {
 import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
 import { MatchAccessLevel } from "@/gateway/shared-types/match-access-level";
 import { QueueSettings } from "@/matchmaker/entity/queue-settings";
+import { ConfigModule } from "@nestjs/config";
+import "@/util/promise";
+import { GenericContainer, StartedTestContainer } from "testcontainers";
+import axios from "axios";
+import { PlayerService } from "@/matchmaker/service/player.service";
+import { v4 } from "uuid";
 import SpyInstance = jest.SpyInstance;
+
+export const fakeParty = (
+  score: number,
+  users: string[] = [testUser()],
+  enterQueueAt = new Date(Date.now() - 60_000),
+) => {
+  const p = new Party();
+  p.id = v4();
+  p.players = users.map((usr, idx) => {
+    const plr = new PlayerInParty(usr, p.id, idx === 0);
+    plr.score = score / users.length;
+    return plr;
+  });
+  p.enterQueueAt = enterQueueAt;
+  p.score = score;
+
+  return p;
+};
 
 export interface TestEnvironment {
   module: TestingModule;
@@ -37,17 +60,20 @@ export interface TestEnvironment {
   containers: {
     pg: StartedPostgreSqlContainer;
     redis: StartedRedisContainer;
+    wiremock: StartedTestContainer;
   };
   ebus: EventBus;
   ebusSpy: SpyInstance;
   service<R>(c: Constructor<R>): R;
   repo<R extends ObjectLiteral>(c: EntityClassOrSchema): Repository<R>;
 
+  mock: (method: string, url: string, response: unknown) => Promise<void>;
+
   queryMocks: Record<string, jest.Mock>;
 }
 
 export function useFullModule(): TestEnvironment {
-  jest.setTimeout(120_000);
+  jest.setTimeout(180_000);
 
   const te: TestEnvironment = {
     module: undefined as unknown as any,
@@ -58,6 +84,7 @@ export function useFullModule(): TestEnvironment {
     service: {} as unknown as any,
     repo: {} as unknown as any,
 
+    mock: {} as unknown as any,
     queryMocks: {},
   };
 
@@ -71,9 +98,28 @@ export function useFullModule(): TestEnvironment {
       .withPassword("password")
       .start();
 
+    te.containers.wiremock = await new GenericContainer(
+      "wiremock/wiremock:3.3.1",
+    )
+      .withExposedPorts(8080)
+      .start();
+
     te.containers.redis = await new RedisContainer()
       .withPassword("redispass")
       .start();
+
+    te.mock = async (method: string, url: string, response: unknown) => {
+      await axios.post(
+        `http://${te.containers.wiremock.getHost()}:${te.containers.wiremock.getFirstMappedPort()}/__admin/mappings`,
+        {
+          request: {
+            method: method,
+            url: url,
+          },
+          response,
+        },
+      );
+    };
 
     te.queryMocks = {
       [GetPlayerInfoQuery.name]: jest.fn((q: GetPlayerInfoQuery) => {
@@ -96,6 +142,33 @@ export function useFullModule(): TestEnvironment {
 
     te.module = await Test.createTestingModule({
       imports: [
+        await ConfigModule.forRoot({
+          isGlobal: true,
+          load: [
+            () => ({
+              gameserverUrl: `http://${te.containers.wiremock.getHost()}:${te.containers.wiremock.getFirstMappedPort()}`,
+            }),
+          ],
+        }),
+        ClientsModule.registerAsync({
+          clients: [
+            {
+              name: "RedisQueue",
+              useFactory(): RedisOptions {
+                return {
+                  transport: Transport.REDIS,
+                  options: {
+                    host: te.containers.redis.getHost(),
+                    password: te.containers.redis.getPassword(),
+                  },
+                };
+              },
+              inject: [],
+              imports: [],
+            },
+          ],
+          isGlobal: true,
+        }),
         TypeOrmModule.forRoot({
           host: te.containers.pg.getHost(),
           port: te.containers.pg.getFirstMappedPort(),
@@ -114,16 +187,7 @@ export function useFullModule(): TestEnvironment {
         TypeOrmModule.forFeature(Entities),
         MatchmakerModule,
       ],
-      providers: [
-        testMockQuery(
-          GetPlayerInfoQuery,
-          te.queryMocks[GetPlayerInfoQuery.name],
-        ),
-        testMockQuery(
-          GetSessionByUserQuery,
-          te.queryMocks[GetSessionByUserQuery.name],
-        ),
-      ],
+      providers: [],
     }).compile();
 
     te.app = await te.module.createNestMicroservice({
@@ -144,12 +208,20 @@ export function useFullModule(): TestEnvironment {
     te.ebus = te.module.get(EventBus);
     te.ebusSpy = jest.spyOn(te.ebus, "publish");
 
-    await te.repo<QueueSettings>(QueueSettings).update(
+    const qs = await te.repo<QueueSettings>(QueueSettings);
+
+    await qs.insert({
+      mode: MatchmakingMode.TURBO,
+    });
+
+    await qs.update(
       { checkInterval: MoreThan(-1) },
       {
         lastCheckTimestamp: new Date("2011-10-05T14:48:00.000Z"),
       },
     );
+
+    te.service(PlayerService)["getIsSubscriber"] = () => Promise.resolve(false);
 
     // Mocks:
   });

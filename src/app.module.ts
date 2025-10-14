@@ -7,11 +7,9 @@ import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm";
 import { CqrsModule } from "@nestjs/cqrs";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
-import { outerQueryNew } from "@/util/outerQuery";
-import { GetPlayerInfoQuery } from "@/gateway/queries/GetPlayerInfo/get-player-info.query";
-import { GetSessionByUserQuery } from "@/gateway/queries/GetSessionByUser/get-session-by-user.query";
 import { MetricsModule } from "./metrics/metrics.module";
 import { getTypeormConfig } from "@/config/typeorm.config";
+import { RabbitMQConfig, RabbitMQModule } from "@golevelup/nestjs-rabbitmq";
 
 @Module({
   imports: [
@@ -35,29 +33,44 @@ import { getTypeormConfig } from "@/config/typeorm.config";
     }),
     MatchmakerModule,
     ScheduleModule.forRoot(),
-    ClientsModule.registerAsync([
-      {
-        name: "RedisQueue",
-        useFactory(config: ConfigService): RedisOptions {
-          return {
-            transport: Transport.REDIS,
-            options: {
-              host: config.get("redis.host"),
-              password: config.get("redis.password"),
-            },
-          };
+    ClientsModule.registerAsync({
+      clients: [
+        {
+          name: "RedisQueue",
+          useFactory(config: ConfigService): RedisOptions {
+            return {
+              transport: Transport.REDIS,
+              options: {
+                host: config.get("redis.host"),
+                password: config.get("redis.password"),
+              },
+            };
+          },
+          inject: [ConfigService],
+          imports: [],
         },
-        inject: [ConfigService],
-        imports: [],
+      ],
+      isGlobal: true,
+    }),
+    RabbitMQModule.forRootAsync({
+      useFactory(config: ConfigService): RabbitMQConfig {
+        return {
+          exchanges: [
+            {
+              name: "app.events",
+              type: "topic",
+            },
+          ],
+          enableControllerDiscovery: true,
+          uri: `amqp://${config.get("rabbitmq.user")}:${config.get("rabbitmq.password")}@${config.get("rabbitmq.host")}:${config.get("rabbitmq.port")}`,
+        };
       },
-    ]),
+      imports: [],
+      inject: [ConfigService],
+    }),
     MetricsModule,
   ],
   controllers: [],
-  providers: [
-    PublishService,
-    outerQueryNew(GetPlayerInfoQuery, "RedisQueue"),
-    outerQueryNew(GetSessionByUserQuery, "RedisQueue"),
-  ],
+  providers: [PublishService],
 })
 export class AppModule {}

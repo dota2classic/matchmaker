@@ -237,4 +237,8 @@ export class PartyService {
       { enterQueueAt: null },
     );
   }
+
+  async getParty(partyId: string) {
+    return this.partyRepository.findOne({ where: { id: partyId } });
+  }
 }

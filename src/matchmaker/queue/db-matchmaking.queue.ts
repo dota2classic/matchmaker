@@ -35,6 +35,7 @@ export class DbMatchmakingQueue {
     try {
       await this.playerService.preparePartyForQueue(party, modes);
     } catch (e) {
+      console.error(e);
       this.logger.error("Prevented bad party from entering queue", e);
       return;
     }

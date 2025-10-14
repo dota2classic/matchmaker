@@ -1,4 +1,9 @@
-import { Inject, Injectable, OnApplicationBootstrap } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+} from "@nestjs/common";
 import { ClientProxy } from "@nestjs/microservices";
 import { EventBus, ofType, QueryBus } from "@nestjs/cqrs";
 import { PartyInviteCreatedEvent } from "@/gateway/events/party/party-invite-created.event";
@@ -10,37 +15,40 @@ import { ReadyStateUpdatedEvent } from "@/gateway/events/ready-state-updated.eve
 import { RoomReadyEvent } from "@/gateway/events/room-ready.event";
 import { RoomNotReadyEvent } from "@/gateway/events/room-not-ready.event";
 import { PlayerDeclinedGameEvent } from "@/gateway/events/mm/player-declined-game.event";
+import { AmqpConnection } from "@golevelup/nestjs-rabbitmq";
 
 @Injectable()
 export class PublishService implements OnApplicationBootstrap {
+  private logger = new Logger(PublishService.name);
+
   constructor(
     private readonly ebus: EventBus,
     private readonly qbus: QueryBus,
     @Inject("RedisQueue") private readonly redisEventQueue: ClientProxy,
+    private readonly amqpConnection: AmqpConnection,
   ) {}
 
   async onApplicationBootstrap() {
+    await this.redisEvents();
+    await this.rabbitEvents();
+  }
+
+  private async rabbitEvents() {
+    const publicEvents: any[] = [RoomReadyEvent, PlayerDeclinedGameEvent];
+
+    this.ebus
+      .pipe(ofType(...publicEvents))
+      .subscribe((t) =>
+        this.amqpConnection.publish("app.events", t.constructor.name, t),
+      );
+  }
+
+  private async redisEvents() {
     try {
       await this.redisEventQueue.connect();
     } catch (e) {}
-
-    // setInterval(async () => {
-    //   const some = await this.redisEventQueue.emit(
-    //     PlayerEnterQueueRequestedEvent.name,
-    //     new PlayerEnterQueueRequestedEvent("123", [MatchmakingMode.BOTS_2X2])
-    //   ).toPromise();
-    // }, 500)
-
     // events to publish to global
     const publicEvents: any[] = [
-      // QueueCreatedEvent,
-      // QueueUpdatedEvent,
-      // ReadyStateUpdatedEvent,
-      // ReadyCheckStartedEvent,
-      // RoomReadyCheckCompleteEvent,
-      // RoomReadyEvent,
-      // RoomNotReadyEvent,
-      //
       PartyInviteExpiredEvent,
       PartyInviteCreatedEvent,
       PartyUpdatedEvent,

@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
-import { findBestMatchBy } from "../balance/perms";
+import { BalancePair, findBestMatchBy } from "../balance/perms";
 import { GameBalance } from "../balance/game-balance";
 import { BalanceConfig } from "../balance/balance-config";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
@@ -15,9 +15,15 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
   DodgeListPredicate,
+  FixedTeamSizePredicate,
+  LongQueuePopPredicate,
+  MakeMaxPlayerScoreDeviationPredicate,
   MakeMaxScoreDifferencePredicate,
+  MaxTeamSizeDifference,
 } from "@/util/predicates";
 import { takeWhileNotDodged } from "@/util/take-while-not-dodged";
+import { BalanceFunctionMapping } from "@/matchmaker/balance/balance-function-type";
+import { BalanceFunction } from "@/matchmaker/balance/balance-functions";
 
 @Injectable()
 export class QueueService implements OnApplicationBootstrap {
@@ -27,21 +33,21 @@ export class QueueService implements OnApplicationBootstrap {
   private modeBalancingMap: BalanceConfig[] = [
     {
       mode: MatchmakingMode.UNRANKED,
-      priority: 0,
-      findGames: (entries) =>
+      priority: 1,
+      findGames: (entries, qs) =>
         this.findBalancedGame(
-          MatchmakingMode.UNRANKED,
           entries,
+          BalanceFunctionMapping[qs.balanceFunctionType],
           5,
           5000,
-          6_000,
+          qs.maxTeamScoreDifference,
+          qs.maxPlayerScoreDifference,
         ),
     },
     {
       mode: MatchmakingMode.SOLOMID,
       priority: 100,
-      findGames: (entries) =>
-        this.findSolomidGame(MatchmakingMode.SOLOMID, entries),
+      findGames: (entries, qs) => this.findSolomidGame(entries, qs),
     },
     {
       mode: MatchmakingMode.BOTS,
@@ -51,14 +57,37 @@ export class QueueService implements OnApplicationBootstrap {
     {
       mode: MatchmakingMode.BOTS_2X2,
       priority: 10,
-      findGames: (entries) =>
-        this.findBalancedGame(MatchmakingMode.BOTS_2X2, entries, 2, 5000, 10e6),
+      findGames: (entries, qs) =>
+        this.findBalancedGame(
+          entries,
+          BalanceFunctionMapping[qs.balanceFunctionType],
+          2,
+          5000,
+          10e6,
+          10e6,
+        ),
+    },
+    {
+      mode: MatchmakingMode.TURBO,
+      priority: 100,
+      findGames: (entries, qs) =>
+        this.findFastEvenGame(
+          BalanceFunctionMapping[qs.balanceFunctionType],
+          entries,
+        ),
     },
     {
       mode: MatchmakingMode.HIGHROOM,
-      priority: 5,
-      findGames: (entries) =>
-        this.findBalancedGame(MatchmakingMode.HIGHROOM, entries, 5, 5000, 10e6),
+      priority: 0,
+      findGames: (entries, qs) =>
+        this.findBalancedGame(
+          entries,
+          BalanceFunctionMapping[qs.balanceFunctionType],
+          5,
+          5000,
+          qs.maxTeamScoreDifference,
+          qs.maxPlayerScoreDifference,
+        ),
     },
   ];
 
@@ -103,7 +132,7 @@ export class QueueService implements OnApplicationBootstrap {
         throw "No balance algorithm specified for mode " + setting.mode;
       }
 
-      const balances = await this.findGamesForConfig(algo, entries);
+      const balances = await this.findGamesForConfig(algo, entries, setting);
       this.logger.log(`Found balances ${balances.length}`);
       await this.submitFoundGames(balances);
       const timeTaken = Date.now() - start;
@@ -140,6 +169,7 @@ export class QueueService implements OnApplicationBootstrap {
   public async findGamesForConfig(
     balanceConfig: BalanceConfig,
     _pool: Party[],
+    qs: QueueSettings,
   ): Promise<GameBalance[]> {
     const totalPool = [..._pool];
 
@@ -151,143 +181,115 @@ export class QueueService implements OnApplicationBootstrap {
       party_count: taskPool.length,
       player_count: taskPool.reduce((a, b) => a + b.players.length, 0),
     });
-    return this.findAllGames(taskPool, balanceConfig);
+    return this.findAllGames(taskPool, balanceConfig, qs);
   }
 
-  public async iterateModes(_pool: Party[]): Promise<GameBalance[]> {
-    const tasks = this.modeBalancingMap.sort((a, b) => a.priority - b.priority);
-    let totalPool = [..._pool];
-    const foundGames: GameBalance[] = [];
+  // public async iterateModes(_pool: Party[]): Promise<GameBalance[]> {
+  //   const tasks = this.modeBalancingMap.sort((a, b) => a.priority - b.priority);
+  //   let totalPool = [..._pool];
+  //   const foundGames: GameBalance[] = [];
+  //
+  //   for (const balanceConfig of tasks) {
+  //     const taskPool = totalPool.filter((t) =>
+  //       t.queueModes.includes(balanceConfig.mode),
+  //     );
+  //     this.logger.log(`Player to balance for mode`, {
+  //       lobby_type: balanceConfig.mode,
+  //       party_count: taskPool.length,
+  //       player_count: taskPool.reduce((a, b) => a + b.players.length, 0),
+  //     });
+  //     const balances = await this.findAllGames(taskPool, balanceConfig);
+  //
+  //     foundGames.push(...balances);
+  //     const partiesToRemove = balances.flatMap((t) =>
+  //       t.right.concat(t.left).flatMap((t) => t.id),
+  //     );
+  //     totalPool = totalPool.filter(
+  //       (entry) => !partiesToRemove.includes(entry.id),
+  //     );
+  //   }
+  //
+  //   return foundGames;
+  // }
 
-    for (const balanceConfig of tasks) {
-      const taskPool = totalPool.filter((t) =>
-        t.queueModes.includes(balanceConfig.mode),
-      );
-      this.logger.log(`Player to balance for mode`, {
-        lobby_type: balanceConfig.mode,
-        party_count: taskPool.length,
-        player_count: taskPool.reduce((a, b) => a + b.players.length, 0),
-      });
-      const balances = await this.findAllGames(taskPool, balanceConfig);
-
-      foundGames.push(...balances);
-      const partiesToRemove = balances.flatMap((t) =>
-        t.right.concat(t.left).flatMap((t) => t.id),
-      );
-      totalPool = totalPool.filter(
-        (entry) => !partiesToRemove.includes(entry.id),
-      );
-    }
-
-    return foundGames;
-  }
-
-  private async findAllGames(eligible: Party[], bc: BalanceConfig) {
+  private async findAllGames(
+    eligible: Party[],
+    bc: BalanceConfig,
+    qs: QueueSettings,
+  ) {
+    const balanceFunction = BalanceFunctionMapping[qs.balanceFunctionType];
     let pool = [...eligible].sort(
       createDateComparator<Party>((it) => it.enterQueueAt!),
     );
 
-    let r: GameBalance | undefined = undefined;
+    let bp: BalancePair | undefined = undefined;
 
     const foundGames: GameBalance[] = [];
 
-    while ((r = await bc.findGames(pool)) !== undefined) {
-      const toRemove = r.left.concat(r.right).flatMap((a) => a.id);
+    while ((bp = await bc.findGames(pool, qs)) !== undefined) {
+      const toRemove = bp.left.concat(bp.right).flatMap((a) => a.id);
       pool = pool.filter((entry) => !toRemove.includes(entry.id));
-      foundGames.push(r);
+      const foundGame = new GameBalance(bc.mode, bp.left, bp.right);
+      foundGames.push(foundGame);
+
+      const { left, right } = foundGame;
+
+      this.logger.log(`Found balanced game`, {
+        diff: balanceFunction(left, right),
+        mode: foundGame.mode,
+        left: left.reduce((a, b) => a + b.score, 0),
+        right: right.reduce((a, b) => a + b.score, 0),
+      });
     }
 
     return foundGames;
   }
 
   private async findBalancedGame(
-    mode: MatchmakingMode,
     pool: Party[],
+    balanceFunction: BalanceFunction,
     teamSize: number = 5,
     timeLimit: number = 5000,
-    maxScoreDifference: number = 9000,
-  ): Promise<GameBalance | undefined> {
+    maxTeamScoreDifference: number,
+    maxPlayerScoreDifference: number,
+  ): Promise<BalancePair | undefined> {
     // Let's first filter off this case
     const totalPlayersInQ = pool.reduce((a, b) => a + b.players.length, 0);
     if (totalPlayersInQ < teamSize * 2) {
       return;
     }
 
-    const bestMatch = findBestMatchBy(
+    return findBestMatchBy(
       pool,
-      teamSize,
-      this.balanceFunction,
+      balanceFunction,
       timeLimit, // Max 5 seconds to find a game
-      [MakeMaxScoreDifferencePredicate(maxScoreDifference), DodgeListPredicate],
+      [
+        FixedTeamSizePredicate(teamSize),
+        MakeMaxScoreDifferencePredicate(maxTeamScoreDifference),
+        MakeMaxPlayerScoreDeviationPredicate(maxPlayerScoreDifference),
+        LongQueuePopPredicate(pool, 1000 * 60 * 20), // At most 20 minutes
+        DodgeListPredicate,
+      ],
     );
-    if (bestMatch === undefined) {
-      return undefined;
-    }
-
-    const { left, right } = bestMatch;
-
-    this.logger.log(`Found balanced game`, {
-      diff: this.balanceFunction(left, right),
-      mode,
-      left: left.reduce((a, b) => a + b.score, 0),
-      right: right.reduce((a, b) => a + b.score, 0),
-    });
-
-    return new GameBalance(mode, left, right);
   }
-
-  private getPartyWaitingScore(party: Party) {
-    // 10 seconds = 1 waiting score
-    return party.enterQueueAt
-      ? (Date.now() - party.enterQueueAt.getTime()) / 1000 / 10
-      : 0;
-  }
-
-  private balanceFunction = (left: Party[], right: Party[]) => {
-    const lavg = left.reduce((a, b) => a + b.score, 0) / 5;
-    const ravg = right.reduce((a, b) => a + b.score, 0) / 5;
-    const avgDiff = Math.abs(lavg - ravg);
-
-    let waitingScore = 0;
-    for (let i = 0; i < left.length; i++) {
-      waitingScore += this.getPartyWaitingScore(left[i]);
-    }
-    for (let i = 0; i < right.length; i++) {
-      waitingScore += this.getPartyWaitingScore(right[i]);
-    }
-
-    // We want waitingScore to be highest, so we invert it
-    waitingScore = Math.log(Math.max(1, waitingScore));
-    waitingScore = -waitingScore;
-
-    const comp1 = waitingScore * 100000;
-
-    return comp1 + avgDiff;
-  };
 
   /**
    * Party of 2 players are automatically placed against each other
    */
-  private async findSolomidGame(
-    mode: MatchmakingMode,
+  private findSolomidGame = async (
     pool: Party[],
-  ): Promise<GameBalance | undefined> {
+    qs: QueueSettings,
+  ): Promise<BalancePair | undefined> => {
+    const balanceFunction = BalanceFunctionMapping[qs.balanceFunctionType];
     if (pool.flatMap((it) => it.players).length < 2) return;
     // If we have a pair party, match them
-    const bestMatch = findBestMatchBy(
+    return findBestMatchBy(
       pool,
-      1,
-      this.balanceFunction,
-      2000, // Max 5 seconds to find a game
+      balanceFunction,
+      2000, // Max 5 seconds to find a game,
+      [FixedTeamSizePredicate(1)],
     );
-
-    if (bestMatch === undefined) {
-      this.logger.warn("Can't find game: should not be possible");
-      return undefined;
-    }
-
-    return new GameBalance(mode, bestMatch.left, bestMatch.right);
-  }
+  };
 
   /**
    * 1 game per party
@@ -301,6 +303,22 @@ export class QueueService implements OnApplicationBootstrap {
     const entries = takeWhileNotDodged(pool, 5);
 
     return new GameBalance(mode, entries, []);
+  }
+
+  private async findFastEvenGame(
+    balanceFunction: BalanceFunction,
+    _pool: Party[],
+  ) {
+    const pool = [..._pool]
+      .sort((a, b) => b.queueTimeMillis - a.queueTimeMillis)
+      .slice(0, 10);
+
+    if (pool.length <= 1) return undefined;
+
+    return findBestMatchBy(pool, balanceFunction, 2000, [
+      MaxTeamSizeDifference(1),
+      DodgeListPredicate,
+    ]);
   }
 
   async onApplicationBootstrap() {

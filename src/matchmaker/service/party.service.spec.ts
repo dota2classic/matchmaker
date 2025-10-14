@@ -68,6 +68,7 @@ describe("PartyService", () => {
               steamId: user,
               partyId: expect.any(String),
               isLeader: true,
+              score: expect.any(Number),
             },
           ],
           score: expect.any(Number),

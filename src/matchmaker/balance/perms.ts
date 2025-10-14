@@ -1,6 +1,9 @@
 import { performance } from "perf_hooks";
 import { Party } from "@/matchmaker/entity/party";
 import { BalancePredicate } from "@/util/predicates";
+import { Logger } from "@nestjs/common";
+
+const logger = new Logger("Permutations");
 
 export type Team = Party[];
 
@@ -9,74 +12,89 @@ export interface BalancePair {
   right: Team;
 }
 
-function* subsetSum(
-  pool: Party[],
-  target: number,
-  partial: Party[] = [],
-): Generator<Party[]> {
-  const plrCount = partial.reduce((a, x) => a + x.size, 0);
+const passesPredicates = (
+  left: Party[],
+  right: Party[],
+  score: number,
+  predicates: BalancePredicate[],
+) => {
+  return (
+    predicates.findIndex((predicate) => !predicate(left, right, score)) === -1
+  );
+};
 
-  // check if the partial sum is equals to target
-  if (plrCount === target) {
-    // total.push(partial);
-    yield partial;
-  }
-  if (plrCount >= target) {
-    return; // if we reach the number why bother to continue
+export function* subsetPairs<T>(parties: T[]): Generator<[T[], T[]]> {
+  const n = parties.length;
+
+  function* backtrack(
+    index: number,
+    left: T[],
+    right: T[],
+  ): Generator<[T[], T[]]> {
+    if (index === n) {
+      if (left.length > 0 && right.length > 0) {
+        yield [left.slice(), right.slice()];
+      }
+      return;
+    }
+
+    const party = parties[index];
+
+    // Option 1: put in left
+    left.push(party);
+    yield* backtrack(index + 1, left, right);
+    left.pop();
+
+    // Option 2: put in right
+    right.push(party);
+    yield* backtrack(index + 1, left, right);
+    right.pop();
+
+    // Option 3: leave unused
+    yield* backtrack(index + 1, left, right);
   }
 
-  for (let i = 0; i < pool.length; i++) {
-    const n = pool[i];
-    const remaining = pool.slice(i + 1);
-    yield* subsetSum(remaining, target, partial.concat([n]));
-  }
+  yield* backtrack(0, [], []);
 }
 
-export function findBestMatchBy(
-  pool: Party[],
-  target: number,
+function bestGame(
+  combinations: Generator<[Party[], Party[]]>,
   func: (left: Team, right: Team) => number,
   timeLimitation: number,
   predicates: BalancePredicate[] = [],
-): BalancePair | undefined {
+) {
   const timeStarted = performance.now();
 
   let bestScore = Number.MAX_SAFE_INTEGER;
   let bestPair: BalancePair | undefined = undefined;
 
-  const leftG = subsetSum(pool, target);
-  for (const left of leftG) {
-    const subpool = pool.filter(
-      (t) => left.findIndex((leftParty) => leftParty.id === t.id) === -1,
-    );
+  for (const [left, right] of combinations) {
+    const score = func(left, right);
 
-    const rightG = subsetSum(subpool, target);
+    if (!passesPredicates(left, right, score, predicates)) {
+      continue;
+    }
 
-    for (const right of rightG) {
-      const score = func(left, right);
-
-      let predicatesPassed = true;
-      for (const predicate of predicates) {
-        if (!predicate(left, right, score)) {
-          predicatesPassed = false;
-          break;
-        }
-      }
-
-      if (!predicatesPassed) {
-        continue;
-      }
-
-      if (score < bestScore) {
-        bestScore = score;
-        bestPair = { left, right };
-      }
-      const time = performance.now() - timeStarted;
-      if (time > timeLimitation) {
-        // We have to quit now
-        return bestPair;
-      }
+    if (score < bestScore) {
+      bestScore = score;
+      bestPair = { left, right };
+    }
+    const time = performance.now() - timeStarted;
+    if (time > timeLimitation) {
+      logger.log("Exceeded time limitation: exiting early", time);
+      // We have to quit now
+      return bestPair;
     }
   }
+
   return bestPair;
+}
+
+export function findBestMatchBy(
+  pool: Party[],
+  func: (left: Team, right: Team) => number,
+  timeLimitation: number,
+  predicates: BalancePredicate[] = [],
+): BalancePair | undefined {
+  return bestGame(subsetPairs(pool), func, timeLimitation, predicates);
 }

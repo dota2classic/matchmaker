@@ -1,5 +1,7 @@
 import { Team } from "@/matchmaker/balance/perms";
 import { totalScore } from "@/util/totalScore";
+import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
+import { Party } from "@/matchmaker/entity/party";
 
 export const isDodgeListViable = (team: Team) => {
   const players = team.flatMap((t) => t.players).map((it) => it.steamId);
@@ -16,6 +18,39 @@ export const isDodgeListViable = (team: Team) => {
 
 export type BalancePredicate = (t1: Team, t2: Team, score: number) => boolean;
 
+export const LongQueuePopPredicate = (pool: Party[], maxQueueTime: number) => {
+  // Take at most 8 oldest players above threshold
+  const guaranteedPlayers = pool
+    .filter((t) => t.queueTimeMillis >= maxQueueTime)
+    .slice(0, 8);
+
+  return (left: Party[], right: Party[]): boolean => {
+    if (guaranteedPlayers.length === 0) return true;
+
+    // Flatten both teams
+    const allParties = new Set([...left, ...right]);
+
+    // Ensure every guaranteed player is present
+    return guaranteedPlayers.every((g) => allParties.has(g));
+  };
+};
+
+export const FixedTeamSizePredicate = (teamSize: number): BalancePredicate => {
+  return (left, right) =>
+    left.reduce((a, b) => a + b.size, 0) === teamSize &&
+    right.reduce((a, b) => a + b.size, 0) === teamSize;
+};
+
+export const MaxTeamSizeDifference = (
+  maxDifference: number,
+): BalancePredicate => {
+  return (left, right) =>
+    Math.abs(
+      left.reduce((a, b) => a + b.size, 0) -
+        right.reduce((a, b) => a + b.size, 0),
+    ) <= maxDifference;
+};
+
 export const DodgeListPredicate: BalancePredicate = (t1, t2) => {
   return isDodgeListViable(t1) && isDodgeListViable(t2);
 };
@@ -24,3 +59,17 @@ export const MakeMaxScoreDifferencePredicate =
   (maxScoreDifference: number): BalancePredicate =>
   (left, right) =>
     Math.abs(totalScore(left) - totalScore(right)) <= maxScoreDifference;
+
+export const MakeMaxPlayerScoreDeviationPredicate =
+  (maxScoreDifference: number): BalancePredicate =>
+  (left, right) => {
+    const pool: PlayerInParty[] = [...left, ...right].flatMap(
+      (party) => party.players,
+    );
+
+    pool.sort((a, b) => a.score - b.score);
+
+    const diff = Math.abs(pool[0].score - pool[pool.length - 1].score);
+
+    return diff <= maxScoreDifference;
+  };
