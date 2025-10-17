@@ -25,6 +25,7 @@ export interface ExpectedConfig {
 
 export default (): ExpectedConfig => {
   return {
+    gameserverUrl: process.env.GAMESERVER_API,
     redis: {
       host: process.env.REDIS_HOST || "localhost",
       password: process.env.REDIS_PASSWORD || "",
