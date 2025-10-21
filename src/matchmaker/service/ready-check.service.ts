@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { Room } from "@/matchmaker/entity/room";
 import { ReadyState } from "@/gateway/events/ready-state-received.event";
 import { ReadyCheckStartedEvent } from "@/gateway/events/ready-check-started.event";
@@ -18,6 +18,7 @@ import * as assert from "assert";
 
 @Injectable()
 export class ReadyCheckService {
+  private readonly logger = new Logger(ReadyCheckService.name);
   constructor(
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
@@ -59,6 +60,7 @@ export class ReadyCheckService {
         "r.ready_check_started_at + :ready_check_duration::interval < now()",
         { ready_check_duration: readyCheckDuration },
       )
+      .andWhere("r.ready_check_finished_at is not null")
       .getMany();
 
     await Promise.all(
@@ -113,6 +115,8 @@ export class ReadyCheckService {
         0,
       "Can't call finishReadyCheck when ready check is not resolved yet",
     );
+
+    this.logger.log(`Finishing ready check for room ${roomId}`);
 
     await this.roomRepository.update(
       {

@@ -63,17 +63,19 @@ export class PartyService {
 
   @Cron(CronExpression.EVERY_5_SECONDS)
   public async cleanupEmptyParties() {
-    const trash = await this.partyRepository
-      .createQueryBuilder("p")
-      .leftJoinAndSelect("p.players", "players")
-      .having("count(players) = 0")
-      .groupBy("p.id, players.steam_id")
-      .getMany();
-
-    if (!trash.length) return;
-
-    await this.partyRepository.remove(trash);
-    this.logger.log(`Removed ${trash.length} trash parties`);
+    const removed = await this.partyRepository.query(`
+DELETE FROM party p
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM player_in_party pip
+  WHERE pip.party_id = p.id
+) and NOT EXISTS (
+  SELECT 1
+  FROM player_in_room pir
+  WHERE pir.party_id = p.id
+);
+    `);
+    this.logger.log(`Removed ${removed} trash parties`);
   }
 
   @Cron(CronExpression.EVERY_SECOND)
