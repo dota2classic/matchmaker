@@ -57,7 +57,6 @@ const QueryHandlers = [
     {
       provide: PlayerApi,
       useFactory: (config: ConfigService) => {
-        console.log("Provide player api::", config.get("gameserverUrl"));
         return new PlayerApi(
           new Configuration({ basePath: config.get("gameserverUrl") }),
         );
