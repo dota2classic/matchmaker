@@ -69,6 +69,12 @@ function bestGame(
   let bestPair: BalancePair | undefined = undefined;
 
   for (const [left, right] of combinations) {
+    const time = performance.now() - timeStarted;
+    if (time > timeLimitation) {
+      logger.warn("Exceeded time limitation: exiting early", time);
+      // We have to quit now
+      return bestPair;
+    }
     const score = func(left, right);
 
     if (!passesPredicates(left, right, score, predicates)) {
@@ -78,12 +84,6 @@ function bestGame(
     if (score < bestScore) {
       bestScore = score;
       bestPair = { left, right };
-    }
-    const time = performance.now() - timeStarted;
-    if (time > timeLimitation) {
-      logger.log("Exceeded time limitation: exiting early", time);
-      // We have to quit now
-      return bestPair;
     }
   }
 
