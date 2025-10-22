@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import * as client from "prom-client";
-import { Counter, Gauge, PrometheusContentType, Summary } from "prom-client";
+import { Counter, Gauge, Summary } from "prom-client";
 import { InjectMetric } from "@willsoto/nestjs-prometheus";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { utcHour } from "@/util/time";
@@ -18,7 +17,6 @@ export class MetricsService {
     @InjectMetric("d2c_queue_time") private readonly queueTime: Summary<string>,
     @InjectMetric("d2c_queue_leave_time")
     private readonly queueLeaveTime: Summary<string>,
-    private readonly pushgateway: client.Pushgateway<PrometheusContentType>,
   ) {}
 
   public playerEnterQueue(mode: MatchmakingMode, cnt = 1) {

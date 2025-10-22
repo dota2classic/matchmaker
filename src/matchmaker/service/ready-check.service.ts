@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { Room } from "@/matchmaker/entity/room";
 import { ReadyState } from "@/gateway/events/ready-state-received.event";
 import { ReadyCheckStartedEvent } from "@/gateway/events/ready-check-started.event";
@@ -18,6 +18,7 @@ import * as assert from "assert";
 
 @Injectable()
 export class ReadyCheckService {
+  private readonly logger = new Logger(ReadyCheckService.name);
   constructor(
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
@@ -50,8 +51,9 @@ export class ReadyCheckService {
     return room;
   }
 
-  @Cron(CronExpression.EVERY_SECOND)
+  @Cron(CronExpression.EVERY_5_SECONDS)
   public async expireReadyChecks(readyCheckDuration: string = "1m") {
+    this.logger.log("REady check expire");
     const expiredRooms = await this.roomRepository
       .createQueryBuilder("r")
       .leftJoinAndSelect("r.players", "players")
@@ -59,7 +61,12 @@ export class ReadyCheckService {
         "r.ready_check_started_at + :ready_check_duration::interval < now()",
         { ready_check_duration: readyCheckDuration },
       )
+      .andWhere("r.ready_check_finished_at is null")
       .getMany();
+
+    if (expiredRooms.length > 0) {
+      this.logger.log(`Expiring ${expiredRooms.length} rooms`);
+    }
 
     await Promise.all(
       expiredRooms.map(async (room) => {
@@ -113,6 +120,8 @@ export class ReadyCheckService {
         0,
       "Can't call finishReadyCheck when ready check is not resolved yet",
     );
+
+    this.logger.log(`Finishing ready check for room ${roomId}`);
 
     await this.roomRepository.update(
       {

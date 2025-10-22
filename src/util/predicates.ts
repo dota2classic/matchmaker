@@ -1,7 +1,13 @@
 import { Team } from "@/matchmaker/balance/perms";
-import { totalScore } from "@/util/totalScore";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { Party } from "@/matchmaker/entity/party";
+
+export type BalancePredicateFn = (t1: Team, t2: Team, score: number) => boolean;
+export type ContextBalancePredicate = {
+  context: any;
+  fn: BalancePredicateFn;
+};
+export type BalancePredicate = BalancePredicateFn | ContextBalancePredicate;
 
 export const isDodgeListViable = (team: Team) => {
   const players = team.flatMap((t) => t.players).map((it) => it.steamId);
@@ -15,8 +21,6 @@ export const isDodgeListViable = (team: Team) => {
   }
   return true;
 };
-
-export type BalancePredicate = (t1: Team, t2: Team, score: number) => boolean;
 
 export const LongQueuePopPredicate = (pool: Party[], maxQueueTime: number) => {
   // Take at most 8 oldest players above threshold
@@ -35,34 +39,63 @@ export const LongQueuePopPredicate = (pool: Party[], maxQueueTime: number) => {
   };
 };
 
-export const FixedTeamSizePredicate = (teamSize: number): BalancePredicate => {
-  return (left, right) =>
-    left.reduce((a, b) => a + b.size, 0) === teamSize &&
-    right.reduce((a, b) => a + b.size, 0) === teamSize;
+export const FixedTeamSizePredicate = (
+  teamSize: number,
+): ContextBalancePredicate => {
+  return {
+    context: { teamSize },
+    fn: (left, right) =>
+      left.reduce((a, b) => a + b.size, 0) === teamSize &&
+      right.reduce((a, b) => a + b.size, 0) === teamSize,
+  };
 };
 
 export const MaxTeamSizeDifference = (
   maxDifference: number,
 ): BalancePredicate => {
-  return (left, right) =>
-    Math.abs(
-      left.reduce((a, b) => a + b.size, 0) -
-        right.reduce((a, b) => a + b.size, 0),
-    ) <= maxDifference;
+  return {
+    context: { maxDifference },
+    fn: (left, right) =>
+      Math.abs(
+        left.reduce((a, b) => a + b.size, 0) -
+          right.reduce((a, b) => a + b.size, 0),
+      ) <= maxDifference,
+  };
 };
 
 export const DodgeListPredicate: BalancePredicate = (t1, t2) => {
+  const isDodgeListViable = (team: Team) => {
+    const players = team.flatMap((t) => t.players).map((it) => it.steamId);
+
+    for (const party of team) {
+      const hasDodge =
+        party.dodgeList.findIndex((dodged) => players.includes(dodged)) !== -1;
+      if (hasDodge) {
+        return false;
+      }
+    }
+    return true;
+  };
   return isDodgeListViable(t1) && isDodgeListViable(t2);
 };
 
-export const MakeMaxScoreDifferencePredicate =
-  (maxScoreDifference: number): BalancePredicate =>
-  (left, right) =>
-    Math.abs(totalScore(left) - totalScore(right)) <= maxScoreDifference;
+export const MakeMaxScoreDifferencePredicate = (
+  maxScoreDifference: number,
+): BalancePredicate => ({
+  context: { maxScoreDifference },
+  fn: (left, right) => {
+    const totalScore = (p: Party[]) => {
+      return p.reduce((a, b) => a + b.score, 0);
+    };
+    return Math.abs(totalScore(left) - totalScore(right)) <= maxScoreDifference;
+  },
+});
 
-export const MakeMaxPlayerScoreDeviationPredicate =
-  (maxScoreDifference: number): BalancePredicate =>
-  (left, right) => {
+export const MakeMaxPlayerScoreDeviationPredicate = (
+  maxScoreDifference: number,
+): BalancePredicate => ({
+  context: { maxScoreDifference },
+  fn: (left, right) => {
     const pool: PlayerInParty[] = [...left, ...right].flatMap(
       (party) => party.players,
     );
@@ -72,4 +105,5 @@ export const MakeMaxPlayerScoreDeviationPredicate =
     const diff = Math.abs(pool[0].score - pool[pool.length - 1].score);
 
     return diff <= maxScoreDifference;
-  };
+  },
+});

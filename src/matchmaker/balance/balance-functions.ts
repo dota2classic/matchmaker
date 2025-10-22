@@ -9,14 +9,14 @@ export type BalanceFunction = (
   right: BalanceEntity[],
 ) => number;
 
-const getPartyWaitingScore = (party: BalanceEntity) => {
-  return party.queueTimeMillis / 100;
-};
 
 export const balanceFunctionLogWaitingTime = (
   left: BalanceEntity[],
   right: BalanceEntity[],
 ) => {
+  const getPartyWaitingScore = (party: BalanceEntity) => {
+    return party.queueTimeMillis / 100;
+  }
   const lavg = left.reduce((a, b) => a + b.score, 0) / 5;
   const ravg = right.reduce((a, b) => a + b.score, 0) / 5;
   const avgDiff = Math.abs(lavg - ravg);
@@ -69,11 +69,36 @@ export const balanceFunctionTakeMost = (
 
   const W_PLAYER_COUNT = -10000;
 
+  // RAW COPY PASTE FOR SERIALIZATION
+  const balanceFunctionLogWaitingTime = (
+    left: BalanceEntity[],
+    right: BalanceEntity[],
+  ) => {
+    const getPartyWaitingScore = (party: BalanceEntity) => {
+      return party.queueTimeMillis / 100;
+    }
+    const lavg = left.reduce((a, b) => a + b.score, 0) / 5;
+    const ravg = right.reduce((a, b) => a + b.score, 0) / 5;
+    const avgDiff = Math.abs(lavg - ravg);
 
-  // if(left.length == 5 && right.length == 5) {
-  //   console.log(balanceFunctionLogWaitingTime(left, right) + playerCount * W_PLAYER_COUNT, left, right)
-  // }
+    let waitingScore = 0;
+    for (let i = 0; i < left.length; i++) {
+      waitingScore += getPartyWaitingScore(left[i]);
+    }
+    for (let i = 0; i < right.length; i++) {
+      waitingScore += getPartyWaitingScore(right[i]);
+    }
 
-  // console.log(left.length, right.length, balanceFunctionLogWaitingTime(left, right) + playerCount * W_PLAYER_COUNT)
+    // We want waitingScore to be highest, so we invert it
+    waitingScore = Math.log(Math.max(1, waitingScore));
+    waitingScore = -waitingScore;
+
+    const comp1 = waitingScore * 100000;
+
+    return comp1 + avgDiff;
+  };
+
+
+
   return balanceFunctionLogWaitingTime(left, right) + playerCount * W_PLAYER_COUNT;
 };
