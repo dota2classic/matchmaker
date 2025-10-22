@@ -7,10 +7,6 @@ function heavyCompute(pool, scoreFn, predicates) {
     eval(predSerialized),
   );
 
-  compiledPredicates.forEach(predicate => {
-    console.log(predicate.toString())
-  })
-
   return findBestMatchBy(pool, eval(scoreFn), 10000, compiledPredicates);
 }
 
