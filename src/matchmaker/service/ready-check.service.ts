@@ -51,8 +51,9 @@ export class ReadyCheckService {
     return room;
   }
 
-  @Cron(CronExpression.EVERY_SECOND)
+  @Cron(CronExpression.EVERY_5_SECONDS)
   public async expireReadyChecks(readyCheckDuration: string = "1m") {
+    this.logger.log("REady check expire");
     const expiredRooms = await this.roomRepository
       .createQueryBuilder("r")
       .leftJoinAndSelect("r.players", "players")
@@ -60,7 +61,7 @@ export class ReadyCheckService {
         "r.ready_check_started_at + :ready_check_duration::interval < now()",
         { ready_check_duration: readyCheckDuration },
       )
-      .andWhere("r.ready_check_finished_at is not null")
+      .andWhere("r.ready_check_finished_at is null")
       .getMany();
 
     if (expiredRooms.length > 0) {
