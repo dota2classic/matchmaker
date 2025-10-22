@@ -1,5 +1,9 @@
 import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
-import { BalancePair, findBestMatchBy } from "../balance/perms";
+import {
+  BalancePair,
+  findBestMatchBy,
+  findBestMatchByAsync,
+} from "../balance/perms";
 import { GameBalance } from "../balance/game-balance";
 import { BalanceConfig } from "../balance/balance-config";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
@@ -136,7 +140,9 @@ export class QueueService implements OnApplicationBootstrap {
       this.logger.log(`Found balances ${balances.length}`);
       await this.submitFoundGames(balances);
       const timeTaken = Date.now() - start;
-      this.logger.log(`Full cycle took ${timeTaken} millis`);
+      this.logger.log(`Full cycle took ${timeTaken} millis`, {
+        lobby_type: setting.mode,
+      });
     } catch (e) {
       error = e;
     } finally {
@@ -249,7 +255,7 @@ export class QueueService implements OnApplicationBootstrap {
     pool: Party[],
     balanceFunction: BalanceFunction,
     teamSize: number = 5,
-    timeLimit: number = 5000,
+    timeLimit: number = 15000,
     maxTeamScoreDifference: number,
     maxPlayerScoreDifference: number,
   ): Promise<BalancePair | undefined> {
@@ -259,7 +265,7 @@ export class QueueService implements OnApplicationBootstrap {
       return;
     }
 
-    return findBestMatchBy(
+    return findBestMatchByAsync(
       pool,
       balanceFunction,
       timeLimit, // Max 5 seconds to find a game

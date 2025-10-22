@@ -107,7 +107,7 @@ export function findBestMatchBy(
     subsetPairs(pool),
     func,
     timeLimitation,
-    predicates as BalancePredicateFn[],
+    predicates.map((t) => (typeof t === "function" ? t : t.fn)),
   );
 }
 
