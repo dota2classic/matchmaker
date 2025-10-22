@@ -16,7 +16,12 @@ export const isDodgeListViable = (team: Team) => {
   return true;
 };
 
-export type BalancePredicate = (t1: Team, t2: Team, score: number) => boolean;
+export type BalancePredicateFn = (t1: Team, t2: Team, score: number) => boolean;
+export type ContextBalancePredicate = {
+  context: any;
+  fn: BalancePredicateFn;
+};
+export type BalancePredicate = BalancePredicateFn | ContextBalancePredicate;
 
 export const LongQueuePopPredicate = (pool: Party[], maxQueueTime: number) => {
   // Take at most 8 oldest players above threshold
@@ -35,20 +40,28 @@ export const LongQueuePopPredicate = (pool: Party[], maxQueueTime: number) => {
   };
 };
 
-export const FixedTeamSizePredicate = (teamSize: number): BalancePredicate => {
-  return (left, right) =>
-    left.reduce((a, b) => a + b.size, 0) === teamSize &&
-    right.reduce((a, b) => a + b.size, 0) === teamSize;
+export const FixedTeamSizePredicate = (
+  teamSize: number,
+): ContextBalancePredicate => {
+  return {
+    context: { teamSize },
+    fn: (left, right) =>
+      left.reduce((a, b) => a + b.size, 0) === teamSize &&
+      right.reduce((a, b) => a + b.size, 0) === teamSize,
+  };
 };
 
 export const MaxTeamSizeDifference = (
   maxDifference: number,
 ): BalancePredicate => {
-  return (left, right) =>
-    Math.abs(
-      left.reduce((a, b) => a + b.size, 0) -
-        right.reduce((a, b) => a + b.size, 0),
-    ) <= maxDifference;
+  return {
+    context: { maxDifference },
+    fn: (left, right) =>
+      Math.abs(
+        left.reduce((a, b) => a + b.size, 0) -
+          right.reduce((a, b) => a + b.size, 0),
+      ) <= maxDifference,
+  };
 };
 
 export const DodgeListPredicate: BalancePredicate = (t1, t2) => {

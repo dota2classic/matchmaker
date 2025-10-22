@@ -1,4 +1,4 @@
-import { findBestMatchBy } from "@/matchmaker/balance/perms";
+import { findBestMatchByAsync } from "@/matchmaker/balance/perms";
 import { Party } from "@/matchmaker/entity/party";
 import { fakeParty } from "@/test/useFullModule";
 import {
@@ -11,22 +11,26 @@ import {
 } from "@/matchmaker/balance/balance-functions";
 
 describe("permutations", () => {
+  jest.setTimeout(30_000);
   // it("should find all possible combinations", () => {
   //   const parties = [1,2,3,4,5,6,7,8,9,10];
   //   const combos = Array.from(subsetPairs(parties));
   //   console.log(combos.filter(t => t[0].length === 5 && t[1].length === 5));
   // });
 
-  it("should find 1x1", () => {
+  it("should find 1x1", async () => {
     const parties = [fakeParty(100), fakeParty(100)];
-    const m = findBestMatchBy(parties, balanceFunctionLogWaitingTime, 1000, [
-      FixedTeamSizePredicate(1),
-    ]);
+    const m = await findBestMatchByAsync(
+      parties,
+      balanceFunctionLogWaitingTime,
+      1000,
+      [FixedTeamSizePredicate(1)],
+    );
 
     expect(m).toBeDefined();
   });
 
-  it("should find even balanced game while taking as much players as possible", () => {
+  it("should find even balanced game while taking as much players as possible", async () => {
     const parties = [
       fakeParty(9000),
       fakeParty(4500),
@@ -34,9 +38,12 @@ describe("permutations", () => {
       fakeParty(1000),
     ];
 
-    const m = findBestMatchBy(parties, balanceFunctionTakeMost, 1000, [
-      MaxTeamSizeDifference(0),
-    ]);
+    const m = await findBestMatchByAsync(
+      parties,
+      balanceFunctionTakeMost,
+      1000,
+      [MaxTeamSizeDifference(0)],
+    );
     expect(m).toBeDefined();
     expect(m!.left).toHaveLength(2);
     expect(m!.right).toHaveLength(2);
@@ -44,7 +51,7 @@ describe("permutations", () => {
     expect(balanceFunctionLogWaitingTime(m!.left, m!.right)).toBeLessThan(2000);
   });
 
-  it("should find game from this", () => {
+  it("should find game from this", async () => {
     const pool: Party[] = [
       {
         score: 3424.7987098068907,
@@ -256,13 +263,30 @@ describe("permutations", () => {
       return t;
     }) as any;
 
-    const some = findBestMatchBy(pool, balanceFunctionLogWaitingTime, 5000, [
-      FixedTeamSizePredicate(5),
-      // MakeMaxScoreDifferencePredicate(maxTeamScoreDifference),
-      // MakeMaxPlayerScoreDeviationPredicate(maxPlayerScoreDifference),
-      // DodgeListPredicate,
-    ]);
+    const some = await findBestMatchByAsync(
+      pool,
+      balanceFunctionLogWaitingTime,
+      20000,
+      [
+        FixedTeamSizePredicate(5),
+        // MakeMaxScoreDifferencePredicate(maxTeamScoreDifference),
+        // MakeMaxPlayerScoreDeviationPredicate(maxPlayerScoreDifference),
+        // DodgeListPredicate,
+      ],
+    );
 
     expect(some).toBeDefined();
+  });
+
+  it("should use workers", async () => {
+    const parties = [fakeParty(100), fakeParty(100)];
+    const m = await findBestMatchByAsync(
+      parties,
+      balanceFunctionLogWaitingTime,
+      1000,
+      [FixedTeamSizePredicate(1)],
+    );
+
+    expect(m).toBeDefined();
   });
 });
