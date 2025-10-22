@@ -1,5 +1,4 @@
 import { Team } from "@/matchmaker/balance/perms";
-import { totalScore } from "@/util/totalScore";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { Party } from "@/matchmaker/entity/party";
 
@@ -84,8 +83,12 @@ export const MakeMaxScoreDifferencePredicate = (
   maxScoreDifference: number,
 ): BalancePredicate => ({
   context: { maxScoreDifference },
-  fn: (left, right) =>
-    Math.abs(totalScore(left) - totalScore(right)) <= maxScoreDifference,
+  fn: (left, right) => {
+    const totalScore = (p: Party[]) => {
+      return p.reduce((a, b) => a + b.score, 0);
+    };
+    return Math.abs(totalScore(left) - totalScore(right)) <= maxScoreDifference;
+  },
 });
 
 export const MakeMaxPlayerScoreDeviationPredicate = (
