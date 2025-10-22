@@ -63,6 +63,10 @@ export class ReadyCheckService {
       .andWhere("r.ready_check_finished_at is not null")
       .getMany();
 
+    if (expiredRooms.length > 0) {
+      this.logger.log(`Expiring ${expiredRooms.length} rooms`);
+    }
+
     await Promise.all(
       expiredRooms.map(async (room) => {
         await this.timeoutPendingReadyChecks(room.id);
