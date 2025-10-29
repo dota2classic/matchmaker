@@ -2,7 +2,11 @@ import { findBestMatchByAsync } from "@/matchmaker/balance/perms";
 import { Party } from "@/matchmaker/entity/party";
 import { fakeParty } from "@/test/useFullModule";
 import {
+  DodgeListPredicate,
   FixedTeamSizePredicate,
+  LongQueuePopPredicate,
+  MakeMaxPlayerScoreDeviationPredicate,
+  MakeMaxScoreDifferencePredicate,
   MaxTeamSizeDifference,
 } from "@/util/predicates";
 import {
@@ -269,9 +273,10 @@ describe("permutations", () => {
       20000,
       [
         FixedTeamSizePredicate(5),
-        // MakeMaxScoreDifferencePredicate(maxTeamScoreDifference),
-        // MakeMaxPlayerScoreDeviationPredicate(maxPlayerScoreDifference),
-        // DodgeListPredicate,
+        MakeMaxScoreDifferencePredicate(100000),
+        MakeMaxPlayerScoreDeviationPredicate(100000),
+        LongQueuePopPredicate(pool, 1000 * 60 * 20), // At most 20 minutes
+        DodgeListPredicate,
       ],
     );
 

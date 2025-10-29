@@ -22,20 +22,27 @@ export const isDodgeListViable = (team: Team) => {
   return true;
 };
 
-export const LongQueuePopPredicate = (pool: Party[], maxQueueTime: number) => {
+export const LongQueuePopPredicate = (
+  pool: Party[],
+  maxQueueTime: number,
+): ContextBalancePredicate => {
   // Take at most 8 oldest players above threshold
-  const guaranteedPlayers = pool
+  const guaranteedPlayers: string[] = pool
     .filter((t) => t.queueTimeMillis >= maxQueueTime)
-    .slice(0, 8);
+    .slice(0, 8)
+    .map((it) => it.id);
 
-  return (left: Party[], right: Party[]): boolean => {
-    if (guaranteedPlayers.length === 0) return true;
+  return {
+    context: { guaranteedPlayers },
+    fn: (left: Party[], right: Party[]): boolean => {
+      if (guaranteedPlayers.length === 0) return true;
 
-    // Flatten both teams
-    const allParties = new Set([...left, ...right]);
+      // Flatten both teams
+      const allParties = new Set([...left, ...right].map((t) => t.id));
 
-    // Ensure every guaranteed player is present
-    return guaranteedPlayers.every((g) => allParties.has(g));
+      // Ensure every guaranteed player is present
+      return guaranteedPlayers.every((g) => allParties.has(g));
+    },
   };
 };
 

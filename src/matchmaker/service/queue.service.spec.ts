@@ -14,6 +14,7 @@ import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { QueueSettings } from "@/matchmaker/entity/queue-settings";
 import { BalanceFunctionType } from "@/matchmaker/balance/balance-function-type";
+import { range } from "@/util/range";
 
 describe("QueueService", () => {
   const te = useFullModule();
@@ -57,6 +58,27 @@ describe("QueueService", () => {
         } satisfies DeepPartial<GameBalance>),
       } satisfies DeepPartial<RoomCreatedEvent>),
     );
+  });
+
+  it("should find 5x5 game", async () => {
+    // given
+    await Promise.all(
+      range(10).map(() =>
+        createParty(te, [MatchmakingMode.UNRANKED], [testUser()], true),
+      ),
+    );
+
+    // when
+    await qs.cycle(MatchmakingMode.UNRANKED);
+
+    expect(te.ebusSpy.mock.lastCall[0]).toMatchObject({
+      id: expect.any(String),
+      balance: expect.objectContaining({
+        mode: MatchmakingMode.UNRANKED,
+        left: expect.anything(),
+        right: expect.anything(),
+      } satisfies DeepPartial<GameBalance>),
+    } satisfies DeepPartial<RoomCreatedEvent>);
   });
 
   it("should find SOLOMID game", async () => {

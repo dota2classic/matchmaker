@@ -4,6 +4,7 @@ import { BalancePredicate, BalancePredicateFn } from "@/util/predicates";
 import { Logger } from "@nestjs/common";
 import { join } from "path";
 import { promisifyWorker } from "@/util/promisify-worker";
+import { construct } from "@/gateway/util/construct";
 
 const logger = new Logger("Permutations");
 
@@ -20,10 +21,6 @@ const passesPredicates = (
   score: number,
   predicates: BalancePredicateFn[],
 ) => {
-  // predicates.forEach((predicate) => {
-  //   console.log("Checking predicate: " + predicate);
-  //   console.log(left, right, score);
-  // });
   return (
     predicates.findIndex((predicate) => !predicate(left, right, score)) === -1
   );
@@ -157,5 +154,13 @@ export async function findBestMatchByAsync(
     })),
     scoreFn: func.toString(),
     predicates: serializedPredicates,
+    timeLimitation,
+  }).then((data: BalancePair | undefined) => {
+    if (!data) return undefined;
+
+    data.right = data.right.map((party) => construct(Party, party));
+    data.left = data.left.map((party) => construct(Party, party));
+
+    return data;
   });
 }

@@ -5,12 +5,8 @@ import {
   testUser,
   useFullModule,
 } from "@/test/useFullModule";
-import { PlayerEnterQueueRequestedEvent } from "@/gateway/events/mm/player-enter-queue-requested.event";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import Redis from "ioredis";
-import { DeepPartial } from "typeorm";
-import { RoomCreatedEvent } from "@/matchmaker/event/room-created.event";
-import { GameBalance } from "@/matchmaker/balance/game-balance";
 import { ReadyCheckService } from "@/matchmaker/service/ready-check.service";
 import { PartyInvite } from "@/matchmaker/entity/party-invite";
 import { PartyService } from "@/matchmaker/service/party.service";
@@ -20,8 +16,6 @@ import { PlayerId } from "@/gateway/shared-types/player-id";
 import { DotaTeam } from "@/gateway/shared-types/dota-team";
 import { Dota2Version } from "@/gateway/shared-types/dota2version";
 import { Party } from "@/matchmaker/entity/party";
-import { QueueService } from "@/matchmaker/service/queue.service";
-import { mockGood } from "@/test/mocks";
 
 describe("AppController (e2e)", () => {
   const te = useFullModule();
@@ -45,36 +39,36 @@ describe("AppController (e2e)", () => {
   const publish = async (t: any) =>
     redisClient.publish(t.constructor.name, JSON.stringify(t));
 
-  it("enter queue and leave flow", async () => {
-    const u1 = testUser();
-    const u2 = testUser();
-
-    await mockGood(te, u1);
-    await mockGood(te, u2);
-
-    // Enter 1x1 queue
-    await publish(
-      new PlayerEnterQueueRequestedEvent(u1, [MatchmakingMode.SOLOMID]),
-    );
-    await publish(
-      new PlayerEnterQueueRequestedEvent(u2, [MatchmakingMode.SOLOMID]),
-    );
-
-    // Wait for events to process
-    await sleep(500);
-
-    //  Simulate cycle call
-    await te.module.get(QueueService).cycle(MatchmakingMode.SOLOMID);
-
-    expect(te.ebusSpy).toReceiveCall(
-      expect.objectContaining({
-        id: expect.any(String),
-        balance: expect.objectContaining({
-          mode: MatchmakingMode.SOLOMID,
-        } satisfies DeepPartial<GameBalance>),
-      } satisfies DeepPartial<RoomCreatedEvent>),
-    );
-  });
+  // it("enter queue and leave flow", async () => {
+  //   const u1 = testUser();
+  //   const u2 = testUser();
+  //
+  //   await mockGood(te, u1);
+  //   await mockGood(te, u2);
+  //
+  //   // Enter 1x1 queue
+  //   await publish(
+  //     new PlayerEnterQueueRequestedEvent(u1, [MatchmakingMode.SOLOMID]),
+  //   );
+  //   await publish(
+  //     new PlayerEnterQueueRequestedEvent(u2, [MatchmakingMode.SOLOMID]),
+  //   );
+  //
+  //   // Wait for events to process
+  //   await sleep(500);
+  //
+  //   //  Simulate cycle call
+  //   await te.module.get(QueueService).cycle(MatchmakingMode.SOLOMID);
+  //
+  //   expect(te.ebusSpy).toReceiveCall(
+  //     expect.objectContaining({
+  //       id: expect.any(String),
+  //       balance: expect.objectContaining({
+  //         mode: MatchmakingMode.SOLOMID,
+  //       } satisfies DeepPartial<GameBalance>),
+  //     } satisfies DeepPartial<RoomCreatedEvent>),
+  //   );
+  // });
 
   describe("Party invites and room interaction", () => {
     it("accepted invite should not intervene with room process", async () => {
