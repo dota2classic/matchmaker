@@ -1,5 +1,6 @@
 // src/workers/heavy.worker.ts
 const { parentPort, workerData } = require("worker_threads");
+console.log(__dirname)
 const { findBestMatchBy } = require("./perms");
 
 // show fatal errors in worker stderr

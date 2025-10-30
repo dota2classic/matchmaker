@@ -140,11 +140,7 @@ export async function findBestMatchByAsync(
       return serializedFunctionWithContext;
     });
 
-  const path = join(
-    __dirname,
-    "../../../dist/src/matchmaker/balance",
-    "perms.worker.js",
-  );
+  const path = resolveWorkerPath();
 
   return promisifyWorker(path, {
     pool: pool.map((entry) => ({
@@ -164,3 +160,15 @@ export async function findBestMatchByAsync(
     return data;
   });
 }
+
+const resolveWorkerPath = () => {
+  if (process.env.NODE_ENV === "production") {
+    return join(__dirname, "perms.worker.js");
+  } else {
+    return join(
+      __dirname,
+      "../../../dist/src/matchmaker/balance",
+      "perms.worker.js",
+    );
+  }
+};
