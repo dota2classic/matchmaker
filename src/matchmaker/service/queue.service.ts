@@ -1,9 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
-import {
-  BalancePair,
-  findBestMatchBy,
-  findBestMatchByAsync,
-} from "../balance/perms";
+import { BalancePair, findBestMatchBy } from "../balance/perms";
 import { GameBalance } from "../balance/game-balance";
 import { BalanceConfig } from "../balance/balance-config";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
@@ -265,7 +261,7 @@ export class QueueService implements OnApplicationBootstrap {
       return;
     }
 
-    return findBestMatchByAsync(
+    return findBestMatchBy(
       pool,
       balanceFunction,
       timeLimit, // Max 5 seconds to find a game
