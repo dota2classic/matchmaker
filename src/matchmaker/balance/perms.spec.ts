@@ -302,7 +302,9 @@ describe("matchmaking party combinations", ()=> {
   function generateRandomTestParties (): Party[] {
     const result: Party[] = [];
 
-    for (let i = 0; i < 100; i++) {
+    // Better not set amounts more than 5 or 7 because of old function bad performance.
+    // Depends on processor power.
+    for (let i = 0; i < 15; i++) {
       const players: string[] = [];
       const playersAmount: number = Math.round(1 + (Math.random() * 4));
 
@@ -361,7 +363,7 @@ describe("matchmaking party combinations", ()=> {
     return s1 === s2;
   }
 
-  it("different data and result", () => {
+  it("different data and result", async () => {
     const testParties1 = generateRandomTestParties();
     const testParties2 = generateRandomTestParties();
 
@@ -377,9 +379,9 @@ describe("matchmaking party combinations", ()=> {
     }
 
     expect(isEqualResults(oldResults, newResults)).toEqual(false);
-  });
+  }, 30_000);
 
-  it("similar data and result", () => {
+  it("similar data and result", async () => {
     const testParties = generateRandomTestParties();
 
     const oldResults: GeneratorResult = [];
@@ -394,9 +396,9 @@ describe("matchmaking party combinations", ()=> {
     }
 
     expect(isEqualResults(oldResults, newResults)).toEqual(true)
-  });
+  }, 30_000);
 
-  it("unavailable combinations", () => {
+  it("unavailable combinations", async () => {
     const tests = [
         generateTestParties(4, 3),
         generateTestParties(0, 0),
@@ -408,7 +410,11 @@ describe("matchmaking party combinations", ()=> {
       for (const test of tests) {
         const result: GeneratorResult = [];
 
+        for (const res of subsetPairsNew(test)) {
+          result.push(res);
+        }
 
+        expect(result).toHaveLength(0)
       }
-  });
+  }, 30_000);
 })
