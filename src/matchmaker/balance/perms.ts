@@ -60,6 +60,9 @@ export function* subsetPairs<T>(parties: T[]): Generator<[T[], T[]]> {
   yield* backtrack(0, [], []);
 }
 
+export function* subsetPairsNew(parties: Party[]): Generator<[Party[], Party[]]> {
+}
+
 function bestGame(
   combinations: Generator<[Party[], Party[]]>,
   func: (left: Team, right: Team) => number,

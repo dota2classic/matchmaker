@@ -1,6 +1,6 @@
-import { findBestMatchByAsync } from "@/matchmaker/balance/perms";
+import { findBestMatchByAsync, subsetPairs, subsetPairsNew } from "@/matchmaker/balance/perms";
 import { Party } from "@/matchmaker/entity/party";
-import { fakeParty } from "@/test/useFullModule";
+import { fakeParty, testUser } from "@/test/useFullModule";
 import {
   DodgeListPredicate,
   FixedTeamSizePredicate,
@@ -295,3 +295,120 @@ describe("permutations", () => {
     expect(m).toBeDefined();
   });
 });
+
+describe("matchmaking party combinations", ()=> {
+  type GeneratorResult = [Party[], Party[]][]
+
+  function generateRandomTestParties (): Party[] {
+    const result: Party[] = [];
+
+    for (let i = 0; i < 100; i++) {
+      const players: string[] = [];
+      const playersAmount: number = Math.round(1 + (Math.random() * 4));
+
+      for (let i = 0; i < playersAmount; i++) {
+        players.push(testUser());
+      }
+
+      result.push(fakeParty(Math.round(50 + (Math.random() * 1500)), players));
+    }
+
+    return result;
+  }
+
+  function generateTestParties (partiesAmount: number, playersAmount: number): Party[] {
+    const result: Party[] = [];
+
+    for (let i = 0; i < partiesAmount; i++) {
+      const players: string[] = [];
+
+      for (let i = 0; i < playersAmount; i++) {
+        players.push(testUser());
+      }
+
+      result.push(fakeParty(Math.round(50 + (Math.random() * 1500)), players));
+    }
+
+    return result;
+  }
+
+  function partiesLength(parties: Party[]): number {
+    let l: number = 0;
+
+    for (const p of parties) {
+      l = l + p.players.length;
+    }
+
+    return l;
+  }
+
+  function* subsetPairsOld(parties: Party[]): Generator<[Party[], Party[]]> {
+    for (const [p1, p2] of subsetPairs(parties)) {
+      if (partiesLength(p1) != 5 || partiesLength(p2) != 5) {
+        continue;
+      }
+      yield [p1, p2];
+    }
+  }
+
+  function isEqualResults(res1: GeneratorResult, res2 :GeneratorResult): boolean {
+    res1.sort();
+    res2.sort();
+
+    const s1 = JSON.stringify(res1);
+    const s2 = JSON.stringify(res2);
+
+    return s1 === s2;
+  }
+
+  it("different data and result", () => {
+    const testParties1 = generateRandomTestParties();
+    const testParties2 = generateRandomTestParties();
+
+    const oldResults: GeneratorResult = [];
+    const newResults: GeneratorResult = [];
+
+    for (const res of subsetPairsOld(testParties1)) {
+      oldResults.push(res);
+    }
+
+    for (const res of subsetPairsNew(testParties2)) {
+      newResults.push(res);
+    }
+
+    expect(isEqualResults(oldResults, newResults)).toEqual(false);
+  });
+
+  it("similar data and result", () => {
+    const testParties = generateRandomTestParties();
+
+    const oldResults: GeneratorResult = [];
+    const newResults: GeneratorResult = [];
+
+    for (const res of subsetPairsOld(testParties)) {
+      oldResults.push(res);
+    }
+
+    for (const res of subsetPairsNew(testParties)) {
+      newResults.push(res);
+    }
+
+    expect(isEqualResults(oldResults, newResults)).toEqual(true)
+  });
+
+  it("unavailable combinations", () => {
+    const tests = [
+        generateTestParties(4, 3),
+        generateTestParties(0, 0),
+        generateTestParties(10, 25),
+        generateTestParties(1, 5),
+        generateTestParties(2, 4),
+      ];
+
+      for (const test of tests) {
+        const result: GeneratorResult = [];
+
+
+      }
+  });
+})
