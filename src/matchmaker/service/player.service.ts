@@ -132,8 +132,8 @@ export class PlayerService {
   ) {
     if (!modes.includes(MatchmakingMode.HIGHROOM)) return;
 
-    if (summary.overall.games < 30) {
-      throw "Not enough games to queue";
+    if (summary.season.mmr < 2500) {
+      throw "Too small mmr to queue";
     }
   }
 
