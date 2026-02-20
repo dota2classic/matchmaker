@@ -4,7 +4,6 @@ import { RedisOptions, Transport } from "@nestjs/microservices";
 import configuration from "@/config/configuration";
 import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { WinstonWrapper } from "@dota2classic/nest_logger";
 
 import "./util/promise";
 
