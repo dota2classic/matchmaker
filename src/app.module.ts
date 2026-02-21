@@ -10,6 +10,7 @@ import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
 import { MetricsModule } from "./metrics/metrics.module";
 import { getTypeormConfig } from "@/config/typeorm.config";
 import { RabbitMQConfig, RabbitMQModule } from "@golevelup/nestjs-rabbitmq";
+import { HealthModule } from "./health/health.module";
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { RabbitMQConfig, RabbitMQModule } from "@golevelup/nestjs-rabbitmq";
       inject: [ConfigService],
     }),
     MetricsModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [PublishService],
