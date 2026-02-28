@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -155,6 +155,15 @@ WHERE NOT EXISTS (
 
     // Then, join new party
     await this.datasource.transaction(async (em) => {
+      const partySize = await em.count(PlayerInParty, {
+        where: {
+          partyId: invite.invited,
+        },
+      });
+      if (partySize >= 5) {
+        throw new BadRequestException();
+      }
+
       const partyMembership = new PlayerInParty(
         invite.invited,
         party.id,
