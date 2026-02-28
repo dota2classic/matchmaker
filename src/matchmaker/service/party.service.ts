@@ -157,7 +157,7 @@ WHERE NOT EXISTS (
     await this.datasource.transaction(async (em) => {
       const partySize = await em.count(PlayerInParty, {
         where: {
-          partyId: invite.invited,
+          partyId: invite.partyId,
         },
       });
       if (partySize >= 5) {
