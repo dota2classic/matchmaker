@@ -4,7 +4,7 @@ import { Response } from "express";
 import { ApiExcludeController } from "@nestjs/swagger";
 
 @ApiExcludeController()
-@Controller("/api/v1/metrics")
+@Controller("/v1/metrics")
 export class PrometheusGuardedController extends PrometheusController {
   @Get()
   index(@Res({ passthrough: true }) response: Response) {
