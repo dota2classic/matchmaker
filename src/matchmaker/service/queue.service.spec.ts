@@ -20,8 +20,11 @@ describe("QueueService", () => {
   const te = useFullModule();
   let qs: QueueService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     qs = te.service(QueueService);
+    await te
+      .repo(QueueSettings)
+      .update({}, { lastCheckTimestamp: new Date(0) });
   });
 
   afterEach(async () => {
@@ -55,6 +58,31 @@ describe("QueueService", () => {
           mode: MatchmakingMode.TURBO,
           left: expect.any(Array),
           right: expect.any(Array),
+        } satisfies DeepPartial<GameBalance>),
+      } satisfies DeepPartial<RoomCreatedEvent>),
+    );
+  });
+
+  it("should find turbo game for 2 players in one party", async () => {
+    // given
+    await createParty(
+      te,
+      [MatchmakingMode.TURBO],
+      [testUser(), testUser()],
+      true,
+    );
+
+    // when
+    await qs.cycle(MatchmakingMode.TURBO);
+
+    // then - 2 humans on left, empty right (bots fill in)
+    expect(te.ebusSpy).toReceiveCall(
+      expect.objectContaining({
+        id: expect.any(String),
+        balance: expect.objectContaining({
+          mode: MatchmakingMode.TURBO,
+          left: expect.arrayContaining([expect.anything()]),
+          right: [],
         } satisfies DeepPartial<GameBalance>),
       } satisfies DeepPartial<RoomCreatedEvent>),
     );
