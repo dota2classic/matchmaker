@@ -25,9 +25,11 @@
     "migration:run-fake": "npx ts-node -P ./tsconfig.json -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run --fake -d ./src/config/typeorm.config.ts",
     "migration:revert": "npx ts-node -P ./tsconfig.json -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d ./src/config/typeorm.config.ts",
     "docker": "docker build . -t dota2classic/matchmaking:core2 && docker push dota2classic/matchmaking:core2",
-    "docker:local": "docker build . -t dota2classic/matchmaking:core2"
+    "docker:local": "docker build . -t dota2classic/matchmaking:core2",
+    "apigen": "node scripts/generate-api-client.js"
   },
   "dependencies": {
+    "@dota2classic/nest-openapi-client-generator": "^0.0.7",
     "@dota2classic/nest_logger": "^0.0.15",
     "@golevelup/nestjs-rabbitmq": "^6.0.1",
     "@nestjs/common": "^10.0.0",

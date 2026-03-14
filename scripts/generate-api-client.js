@@ -1,0 +1,55 @@
+const { runClientGenerator } = require("@dota2classic/nest-openapi-client-generator");
+const { AppModule } = require("../dist/src/app.module");
+const fs = require("fs");
+const path = require("path");
+
+const packageName = process.env.NPM_PACKAGE_NAME || "@dota2classic/matchmaker-generated";
+const packageVersion = process.env.NPM_PACKAGE_VERSION || "0.0.1";
+const outputDir = process.env.OUTPUT_DIR || "./generated-client";
+
+function patchGeneratedFiles() {
+  const pkgPath = path.join(outputDir, "package.json");
+  const tsconfigPath = path.join(outputDir, "tsconfig.json");
+
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+  pkg.main = "./dist/Api.js";
+  pkg.types = "./dist/Api.d.ts";
+  pkg.files = ["dist"];
+  pkg.publishConfig = { access: "public" };
+  pkg.repository = { type: "git", url: "https://github.com/dota2classic/matchmaker" };
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+
+  const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, "utf-8"));
+  tsconfig.compilerOptions.outDir = "./dist";
+  fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2) + "\n");
+
+  console.log("Patched generated files for npm publishing.");
+}
+
+process.on("exit", () => {
+  try {
+    if (fs.existsSync(path.join(outputDir, "package.json"))) {
+      patchGeneratedFiles();
+    }
+  } catch (err) {
+    console.error("Failed to patch generated files:", err);
+  }
+});
+
+async function main() {
+  await runClientGenerator(AppModule, {
+    title: "Matchmaker API",
+    description: "D2Classic Matchmaker API",
+    version: "1.0",
+    tags: ["matchmaker"],
+    bearerAuth: true,
+    packageName,
+    packageVersion,
+    outputDir,
+  });
+}
+
+main().catch((err) => {
+  console.error("Failed to generate API client:", err);
+  process.exit(1);
+});
