@@ -3,10 +3,10 @@ import { Logger } from "@nestjs/common";
 import { TestEnvironment } from "@/test/useFullModule";
 import { BanReason } from "@/gateway/shared-types/ban";
 import {
-  GameserverBanStatusDto,
-  GameserverDodgeListEntryDto,
-  GameserverPlayerSummaryDto,
-} from "@/generated-api/gameserver";
+  BanStatusDto,
+  DodgeListEntryDto,
+  PlayerSummaryDto,
+} from "@dota2classic/gs-api-generated";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { MatchAccessLevel } from "@/gateway/shared-types/match-access-level";
 
@@ -47,7 +47,7 @@ export async function mockSummary(
   await te.mock("GET", `/player/summary/${steamId}`, {
     status: 200,
     jsonBody: {
-      accessLevel: accessLevel, // Example enum value
+      accessLevel: accessLevel as unknown as PlayerSummaryDto["accessLevel"],
       steamId: steamId,
       season: {
         mmr: 4300,
@@ -70,13 +70,15 @@ export async function mockSummary(
         ? {
             serverUrl: "",
             matchId: 432,
-            lobbyType: MatchmakingMode.LOBBY,
+            lobbyType: MatchmakingMode.LOBBY as unknown as NonNullable<
+              PlayerSummaryDto["session"]
+            >["lobbyType"],
             abandoned: false,
           }
         : undefined,
       calibrationGamesLeft: 0,
       reports: [],
-    } satisfies GameserverPlayerSummaryDto,
+    } satisfies PlayerSummaryDto,
   });
 }
 
@@ -88,7 +90,7 @@ export async function mockBanInfo(
   await te.mock("GET", `/player/ban_info/${steamId}`, {
     status: 200,
     jsonBody: {
-      status: BanReason.INFINITE_BAN, // assuming NONE exists
+      status: BanReason.INFINITE_BAN as unknown as BanStatusDto["status"],
       steam_id: steamId.toString(), // fake Steam ID
       isBanned,
       bannedUntil: isBanned
@@ -96,7 +98,7 @@ export async function mockBanInfo(
             Date.now() + Math.random() * 1000 * 60 * 60 * 24 * 30,
           ).toISOString()
         : "", // empty if not banned
-    } satisfies GameserverBanStatusDto,
+    } satisfies BanStatusDto,
   });
 }
 
@@ -110,7 +112,7 @@ export async function mockDodgeList(
     jsonBody: list.map((t) => ({
       steamId: t,
       createdAt: new Date().toISOString(),
-    })) satisfies GameserverDodgeListEntryDto[],
+    })) satisfies DodgeListEntryDto[],
   });
 }
 

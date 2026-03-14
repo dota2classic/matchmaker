@@ -21,7 +21,7 @@ import { PartyInviteAcceptedHandler } from "@/matchmaker/event-handler/party-inv
 import { PartyLeaveRequestedHandler } from "@/matchmaker/event-handler/party-leave-requested.handler";
 import { ReadyStateReceivedHandler } from "@/matchmaker/event-handler/ready-state-received.handler";
 import { MatchmakerApiController } from "@/matchmaker/matchmaker-api.controller";
-import { Configuration, PlayerApi } from "@/generated-api/gameserver";
+import { GsApiGeneratedModule } from "@dota2classic/gs-api-generated/dist/module";
 import { ConfigService } from "@nestjs/config";
 import { RmqController } from "@/matchmaker/rmq.controller";
 
@@ -43,7 +43,16 @@ const QueryHandlers = [
 
 @Module({
   controllers: [MatchmakerController, MatchmakerApiController, RmqController],
-  imports: [TypeOrmModule.forFeature(Entities), CqrsModule],
+  imports: [
+    TypeOrmModule.forFeature(Entities),
+    CqrsModule,
+    GsApiGeneratedModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        baseUrl: config.get<string>("gameserverUrl")!,
+      }),
+    }),
+  ],
   providers: [
     PartyService,
     PlayerService,
@@ -54,15 +63,6 @@ const QueryHandlers = [
     DbMatchmakingQueue,
     ...EventHandlers,
     ...QueryHandlers,
-    {
-      provide: PlayerApi,
-      useFactory: (config: ConfigService) => {
-        return new PlayerApi(
-          new Configuration({ basePath: config.get("gameserverUrl") }),
-        );
-      },
-      inject: [ConfigService],
-    },
   ],
 })
 export class MatchmakerModule {}

@@ -4,11 +4,12 @@ import { QueryBus } from "@nestjs/cqrs";
 import { DataSource, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
-import { canQueueMode } from "@/gateway/shared-types/match-access-level";
 import {
-  GameserverPlayerSummaryDto,
-  PlayerApi,
-} from "@/generated-api/gameserver";
+  canQueueMode,
+  MatchAccessLevel,
+} from "@/gateway/shared-types/match-access-level";
+import { ApiClient } from "@dota2classic/gs-api-generated/dist/module";
+import { PlayerSummaryDto } from "@dota2classic/gs-api-generated";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { ClientProxy } from "@nestjs/microservices";
 import { GetUserInfoQuery } from "@/gateway/queries/GetUserInfo/get-user-info.query";
@@ -24,7 +25,7 @@ export class PlayerService {
     private readonly qbus: QueryBus,
     @InjectRepository(Party)
     private readonly partyRepository: Repository<Party>,
-    private readonly playerApi: PlayerApi,
+    private readonly playerApi: ApiClient,
     private readonly ds: DataSource,
     @Inject("RedisQueue") private readonly redisEventQueue: ClientProxy,
   ) {}
@@ -49,9 +50,15 @@ export class PlayerService {
     const resolvedScores = await Promise.all(
       plrs.map(async (steamId) => {
         const [summary, ban, dodgeList, isSubscriber] = await Promise.combine([
-          this.playerApi.playerControllerPlayerSummary(steamId),
-          this.playerApi.playerControllerBanInfo(steamId),
-          this.playerApi.playerControllerGetDodgeList(steamId),
+          this.playerApi.player
+            .playerControllerPlayerSummary(steamId)
+            .then((r) => r.data),
+          this.playerApi.player
+            .playerControllerBanInfo(steamId)
+            .then((r) => r.data),
+          this.playerApi.player
+            .playerControllerGetDodgeList({ steamId })
+            .then((r) => r.data),
           this.getIsSubscriber(steamId),
         ]);
 
@@ -77,7 +84,11 @@ export class PlayerService {
 
         if (
           modes.findIndex(
-            (mode) => !canQueueMode(summary.accessLevel, mode),
+            (mode) =>
+              !canQueueMode(
+                summary.accessLevel as unknown as MatchAccessLevel,
+                mode,
+              ),
           ) !== -1
         ) {
           throw new Error("Can't queue this mode");
@@ -126,10 +137,7 @@ export class PlayerService {
     return party;
   }
 
-  private assertHighroom(
-    modes: MatchmakingMode[],
-    summary: GameserverPlayerSummaryDto,
-  ) {
+  private assertHighroom(modes: MatchmakingMode[], summary: PlayerSummaryDto) {
     if (!modes.includes(MatchmakingMode.HIGHROOM)) return;
 
     if (summary.season.mmr < 2500) {
