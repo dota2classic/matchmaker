@@ -85,7 +85,6 @@ function bestGame(
   for (const [left, right] of combinations) {
     const time = performance.now() - timeStarted;
     if (time > timeLimitation) {
-      console.warn("EARLY EXIT!!");
       logger.warn("Exceeded time limitation: exiting early", time);
       // We have to quit now
       return bestPair;

@@ -129,7 +129,7 @@ export class QueueService implements OnApplicationBootstrap {
       this.logger.log(`Acquire entries ${entries.length}`);
       const algo = this.modeBalancingMap.find((t) => t.mode === setting.mode);
       if (!algo) {
-        throw "No balance algorithm specified for mode " + setting.mode;
+        throw new Error("No balance algorithm specified for mode " + setting.mode);
       }
 
       const balances = await this.findGamesForConfig(algo, entries, setting);
@@ -185,34 +185,6 @@ export class QueueService implements OnApplicationBootstrap {
     });
     return this.findAllGames(taskPool, balanceConfig, qs);
   }
-
-  // public async iterateModes(_pool: Party[]): Promise<GameBalance[]> {
-  //   const tasks = this.modeBalancingMap.sort((a, b) => a.priority - b.priority);
-  //   let totalPool = [..._pool];
-  //   const foundGames: GameBalance[] = [];
-  //
-  //   for (const balanceConfig of tasks) {
-  //     const taskPool = totalPool.filter((t) =>
-  //       t.queueModes.includes(balanceConfig.mode),
-  //     );
-  //     this.logger.log(`Player to balance for mode`, {
-  //       lobby_type: balanceConfig.mode,
-  //       party_count: taskPool.length,
-  //       player_count: taskPool.reduce((a, b) => a + b.players.length, 0),
-  //     });
-  //     const balances = await this.findAllGames(taskPool, balanceConfig);
-  //
-  //     foundGames.push(...balances);
-  //     const partiesToRemove = balances.flatMap((t) =>
-  //       t.right.concat(t.left).flatMap((t) => t.id),
-  //     );
-  //     totalPool = totalPool.filter(
-  //       (entry) => !partiesToRemove.includes(entry.id),
-  //     );
-  //   }
-  //
-  //   return foundGames;
-  // }
 
   private async findAllGames(
     eligible: Party[],
