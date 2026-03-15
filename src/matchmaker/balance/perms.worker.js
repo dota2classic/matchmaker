@@ -11,7 +11,7 @@ process.on("unhandledRejection", (r) => {
   console.error("Unhandled rejection in worker:", r);
 });
 
-function heavyCompute(pool, scoreFn, predicates, timeLimitation = 10000) {
+function heavyCompute(pool, scoreFn, predicates, timeLimitation = 10000, maxTeamSize = undefined) {
   const compiledPredicates = predicates.map((predSerialized) =>
     eval(predSerialized),
   );
@@ -21,6 +21,7 @@ function heavyCompute(pool, scoreFn, predicates, timeLimitation = 10000) {
     eval(scoreFn),
     timeLimitation,
     compiledPredicates,
+    maxTeamSize,
   );
 
   if (!balance) return undefined;
@@ -39,7 +40,7 @@ function heavyCompute(pool, scoreFn, predicates, timeLimitation = 10000) {
 
 // When running as a worker:
 if (parentPort) {
-  const { pool, scoreFn, predicates, timeLimitation } = workerData;
-  const result = heavyCompute(pool, scoreFn, predicates, timeLimitation);
+  const { pool, scoreFn, predicates, timeLimitation, maxTeamSize } = workerData;
+  const result = heavyCompute(pool, scoreFn, predicates, timeLimitation, maxTeamSize);
   parentPort.postMessage(result);
 }

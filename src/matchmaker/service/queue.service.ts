@@ -272,6 +272,7 @@ export class QueueService implements OnApplicationBootstrap {
         LongQueuePopPredicate(pool, 1000 * 60 * 20), // At most 20 minutes
         DodgeListPredicate,
       ],
+      teamSize,
     );
   }
 

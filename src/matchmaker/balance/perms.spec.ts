@@ -1,4 +1,4 @@
-import { findBestMatchByAsync } from "@/matchmaker/balance/perms";
+import { findBestMatchByAsync, subsetPairs } from "@/matchmaker/balance/perms";
 import { Party } from "@/matchmaker/entity/party";
 import { fakeParty } from "@/test/useFullModule";
 import {
@@ -281,6 +281,104 @@ describe("permutations", () => {
     );
 
     expect(some).toBeDefined();
+  });
+
+  describe("subsetPairs with maxTeamSize", () => {
+    it("should yield all combinations without maxTeamSize", () => {
+      const items = [1, 2, 3];
+      const result = Array.from(subsetPairs(items));
+      // 3^3 = 27 total, minus invalid (empty left/right) = known set
+      expect(result.length).toBeGreaterThan(0);
+      // All should have non-empty teams
+      result.forEach(([left, right]) => {
+        expect(left.length).toBeGreaterThan(0);
+        expect(right.length).toBeGreaterThan(0);
+      });
+    });
+
+    it("should never exceed maxTeamSize per team", () => {
+      const items = [1, 2, 3, 4, 5, 6];
+      const maxTeamSize = 3;
+      const result = Array.from(subsetPairs(items, maxTeamSize));
+      result.forEach(([left, right]) => {
+        expect(left.length).toBeLessThanOrEqual(maxTeamSize);
+        expect(right.length).toBeLessThanOrEqual(maxTeamSize);
+      });
+    });
+
+    it("should produce fewer combinations with maxTeamSize than without", () => {
+      const items = [1, 2, 3, 4, 5, 6, 7, 8];
+      const all = Array.from(subsetPairs(items)).length;
+      const constrained = Array.from(subsetPairs(items, 3)).length;
+      expect(constrained).toBeLessThan(all);
+    });
+
+    it("should produce exactly 48732 combinations for 10 items with maxTeamSize=5", () => {
+      // Derived analytically: sum_{l=1}^{5} sum_{r=1}^{min(5,10-l)} C(10,l)*C(10-l,r) = 48732
+      // Unconstrained would be 3^10 - 2*2^10 + 1 = 57002
+      const items = Array.from({ length: 10 }, (_, i) => i);
+      const result = Array.from(subsetPairs(items, 5));
+      expect(result).toHaveLength(48732);
+    });
+
+    it("should use getSize to measure party sizes", () => {
+      const parties = [
+        fakeParty(1000, ["a", "b", "c"]), // size 3
+        fakeParty(1000, ["d", "e"]), // size 2
+        fakeParty(1000, ["f"]), // size 1
+        fakeParty(1000, ["g"]), // size 1
+      ];
+      const maxTeamSize = 3;
+      const result = Array.from(
+        subsetPairs(parties, maxTeamSize, (p) => p.size),
+      );
+      result.forEach(([left, right]) => {
+        const leftSize = left.reduce((s, p) => s + p.size, 0);
+        const rightSize = right.reduce((s, p) => s + p.size, 0);
+        expect(leftSize).toBeLessThanOrEqual(maxTeamSize);
+        expect(rightSize).toBeLessThanOrEqual(maxTeamSize);
+      });
+    });
+
+    it("should find valid 5v5 from a pool of size-1 parties", async () => {
+      const pool = Array.from({ length: 12 }, (_, i) =>
+        fakeParty(1000 + i * 100),
+      );
+      const m = await findBestMatchByAsync(
+        pool,
+        balanceFunctionLogWaitingTime,
+        5000,
+        [FixedTeamSizePredicate(5)],
+      );
+      expect(m).toBeDefined();
+      const leftSize = m!.left.reduce((s, p) => s + p.size, 0);
+      const rightSize = m!.right.reduce((s, p) => s + p.size, 0);
+      expect(leftSize).toBe(5);
+      expect(rightSize).toBe(5);
+    });
+
+    it("should find valid 5v5 from mixed party sizes", async () => {
+      const pool = [
+        fakeParty(3000, ["a", "b", "c"]), // size 3
+        fakeParty(2000, ["c", "d"]), // size 2
+        fakeParty(2000, ["e", "f"]), // size 2
+        fakeParty(3000, ["g", "h", "i"]), // size 3
+        fakeParty(1000, ["j"]), // size 1
+        fakeParty(1000, ["k"]), // size 1
+        fakeParty(1000, ["l"]), // size 1
+      ];
+      const m = await findBestMatchByAsync(
+        pool,
+        balanceFunctionLogWaitingTime,
+        5000,
+        [FixedTeamSizePredicate(5)],
+      );
+      expect(m).toBeDefined();
+      const leftSize = m!.left.reduce((s, p) => s + p.size, 0);
+      const rightSize = m!.right.reduce((s, p) => s + p.size, 0);
+      expect(leftSize).toBe(5);
+      expect(rightSize).toBe(5);
+    });
   });
 
   it("should use workers", async () => {

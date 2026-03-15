@@ -26,13 +26,19 @@ const passesPredicates = (
   );
 };
 
-export function* subsetPairs<T>(parties: T[]): Generator<[T[], T[]]> {
+export function* subsetPairs<T>(
+  parties: T[],
+  maxTeamSize?: number,
+  getSize: (t: T) => number = () => 1,
+): Generator<[T[], T[]]> {
   const n = parties.length;
 
   function* backtrack(
     index: number,
     left: T[],
     right: T[],
+    leftSize: number,
+    rightSize: number,
   ): Generator<[T[], T[]]> {
     if (index === n) {
       if (left.length > 0 && right.length > 0) {
@@ -42,22 +48,27 @@ export function* subsetPairs<T>(parties: T[]): Generator<[T[], T[]]> {
     }
 
     const party = parties[index];
+    const size = getSize(party);
 
     // Option 1: put in left
-    left.push(party);
-    yield* backtrack(index + 1, left, right);
-    left.pop();
+    if (maxTeamSize === undefined || leftSize + size <= maxTeamSize) {
+      left.push(party);
+      yield* backtrack(index + 1, left, right, leftSize + size, rightSize);
+      left.pop();
+    }
 
     // Option 2: put in right
-    right.push(party);
-    yield* backtrack(index + 1, left, right);
-    right.pop();
+    if (maxTeamSize === undefined || rightSize + size <= maxTeamSize) {
+      right.push(party);
+      yield* backtrack(index + 1, left, right, leftSize, rightSize + size);
+      right.pop();
+    }
 
     // Option 3: leave unused
-    yield* backtrack(index + 1, left, right);
+    yield* backtrack(index + 1, left, right, leftSize, rightSize);
   }
 
-  yield* backtrack(0, [], []);
+  yield* backtrack(0, [], [], 0, 0);
 }
 
 function bestGame(
@@ -99,9 +110,10 @@ export function findBestMatchBy(
   func: (left: Team, right: Team) => number,
   timeLimitation: number,
   predicates: BalancePredicate[] = [],
+  maxTeamSize?: number,
 ): BalancePair | undefined {
   return bestGame(
-    subsetPairs(pool),
+    subsetPairs(pool, maxTeamSize, (p) => p.size),
     func,
     timeLimitation,
     predicates.map((t) => (typeof t === "function" ? t : t.fn)),
@@ -113,6 +125,7 @@ export async function findBestMatchByAsync(
   func: (left: Team, right: Team) => number,
   timeLimitation: number,
   predicates: BalancePredicate[] = [],
+  maxTeamSize?: number,
 ): Promise<BalancePair | undefined> {
   const serializedPredicates = predicates
     .map((it) => {
@@ -151,6 +164,7 @@ export async function findBestMatchByAsync(
     scoreFn: func.toString(),
     predicates: serializedPredicates,
     timeLimitation,
+    maxTeamSize,
   }).then((data: BalancePair | undefined) => {
     if (!data) return undefined;
 
