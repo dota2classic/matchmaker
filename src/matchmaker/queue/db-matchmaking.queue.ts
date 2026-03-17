@@ -8,6 +8,7 @@ import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { QueueUpdatedEvent } from "@/gateway/events/queue-updated.event";
 import { PlayerService } from "@/matchmaker/service/player.service";
 import { MetricsService } from "@/metrics/metrics.service";
+import { QueueStatisticsService } from "@/matchmaker/service/queue-statistics.service";
 
 /**
  * Contracts:
@@ -25,6 +26,7 @@ export class DbMatchmakingQueue {
     private readonly ds: DataSource,
     private readonly playerService: PlayerService,
     @Optional() private readonly metrics?: MetricsService,
+    @Optional() private readonly queueStatistics?: QueueStatisticsService,
   ) {}
 
   async enterQueue(
@@ -47,6 +49,8 @@ export class DbMatchmakingQueue {
       },
     });
     if (isInRoom) return;
+
+    await this.queueStatistics?.recordQueueEntry(party, modes);
 
     party = await this.ds.transaction((em) => {
       party.inQueue = true;
@@ -121,6 +125,14 @@ export class DbMatchmakingQueue {
         this.metrics?.playerLeftQueue(mode, entry.size),
       );
     });
+
+    if (clearEnterQueueTime) {
+      await Promise.all(
+        entries.map((entry) =>
+          this.queueStatistics?.recordQueueLeft(entry.id),
+        ),
+      );
+    }
 
     preparedMetrics.forEach(({ duration, mode }) => {
       this.metrics?.recordLeaveQueue(mode, duration);

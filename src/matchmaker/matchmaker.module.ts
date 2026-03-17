@@ -24,6 +24,7 @@ import { MatchmakerApiController } from "@/matchmaker/matchmaker-api.controller"
 import { GsApiGeneratedModule } from "@dota2classic/gs-api-generated/dist/module";
 import { ConfigService } from "@nestjs/config";
 import { RmqController } from "@/matchmaker/rmq.controller";
+import { QueueStatisticsService } from "@/matchmaker/service/queue-statistics.service";
 
 const EventHandlers = [
   PlayerEnterQueueRequestedHandler,
@@ -61,6 +62,7 @@ const QueryHandlers = [
     ReadyCheckService,
 
     DbMatchmakingQueue,
+    QueueStatisticsService,
     ...EventHandlers,
     ...QueryHandlers,
   ],

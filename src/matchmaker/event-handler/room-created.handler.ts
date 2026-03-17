@@ -8,6 +8,7 @@ import { MetricsService } from "@/metrics/metrics.service";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { GameBalance } from "@/matchmaker/balance/game-balance";
 import { Logger, Optional } from "@nestjs/common";
+import { QueueStatisticsService } from "@/matchmaker/service/queue-statistics.service";
 
 @EventsHandler(RoomCreatedEvent)
 export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
@@ -19,6 +20,7 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
     private readonly roomRepository: Repository<Room>,
     private readonly readyCheckService: ReadyCheckService,
     @Optional() private readonly metrics?: MetricsService,
+    @Optional() private readonly queueStatistics?: QueueStatisticsService,
   ) {}
   async handle(event: RoomCreatedEvent) {
     const room = await this.roomRepository.findOne({
@@ -28,6 +30,7 @@ export class RoomCreatedHandler implements IEventHandler<RoomCreatedEvent> {
     });
     if (!room) return;
     this.doMetrics(room, event.balance);
+    await this.queueStatistics?.recordMatchFound(event.balance, room.id);
     await this.readyCheckService.startReadyCheck(room);
   }
 

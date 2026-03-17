@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import { Room } from "@/matchmaker/entity/room";
 import { ReadyState } from "@/gateway/events/ready-state-received.event";
 import { ReadyCheckStartedEvent } from "@/gateway/events/ready-check-started.event";
@@ -15,6 +15,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { ReadyStateUpdatedEvent } from "@/gateway/events/ready-state-updated.event";
 import { RoomNotReadyEvent } from "@/gateway/events/room-not-ready.event";
 import * as assert from "assert";
+import { QueueStatisticsService } from "@/matchmaker/service/queue-statistics.service";
 
 @Injectable()
 export class ReadyCheckService {
@@ -27,6 +28,7 @@ export class ReadyCheckService {
     private readonly datasource: DataSource,
     private readonly ebus: EventBus,
     private readonly partyService: PartyService,
+    @Optional() private readonly queueStatistics?: QueueStatisticsService,
   ) {}
 
   async startReadyCheck(room: Room) {
@@ -134,6 +136,12 @@ export class ReadyCheckService {
     await this.roomRepository.delete({ id: room.id });
 
     const [accepted, declined] = this.readyCheckResult(room);
+
+    await this.queueStatistics?.recordReadyCheckResult(
+      room.id,
+      room.players,
+      room.readyCheckStartedAt,
+    );
 
     if (declined.length > 0) {
       await this.onFailedRoom(room, accepted, declined);
