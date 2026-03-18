@@ -109,6 +109,59 @@ describe("QueueService", () => {
     } satisfies DeepPartial<RoomCreatedEvent>);
   });
 
+  it("should find SOLOMID game for party of 2", async () => {
+    // given
+    const u1 = testUser();
+    const u2 = testUser();
+    const duo = await createParty(
+      te,
+      [MatchmakingMode.SOLOMID],
+      [u1, u2],
+      true,
+    );
+
+    // when
+    await qs.cycle(MatchmakingMode.SOLOMID);
+
+    // then
+    expect(te.ebusSpy).toReceiveCall(
+      expect.objectContaining({
+        id: expect.any(String),
+        balance: expect.objectContaining({
+          mode: MatchmakingMode.SOLOMID,
+        } satisfies DeepPartial<GameBalance>),
+      } satisfies DeepPartial<RoomCreatedEvent>),
+    );
+
+    const pirs = await te.repo(PlayerInRoom).find({
+      where: { steamId: In([u1, u2]) },
+    });
+    expect(pirs).toHaveLength(2);
+    expect(pirs[0].partyId).toBe(pirs[1].partyId);
+    expect(pirs[0].team).not.toBe(pirs[1].team);
+  });
+
+  it("should find SOLOMID games for both duo party and solo parties", async () => {
+    // given
+    await createParty(
+      te,
+      [MatchmakingMode.SOLOMID],
+      [testUser(), testUser()],
+      true,
+    );
+    await createParty(te, [MatchmakingMode.SOLOMID], [testUser()], true);
+    await createParty(te, [MatchmakingMode.SOLOMID], [testUser()], true);
+
+    // when
+    await qs.cycle(MatchmakingMode.SOLOMID);
+
+    // then - 2 games: one for duo party, one for two solos
+    const roomCreatedCalls = te.ebusSpy.mock.calls.filter(
+      (c: any) => c[0] instanceof RoomCreatedEvent,
+    );
+    expect(roomCreatedCalls).toHaveLength(2);
+  });
+
   it("should find SOLOMID game", async () => {
     // given
     const p1 = await createParty(

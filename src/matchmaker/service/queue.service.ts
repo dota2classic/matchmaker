@@ -263,7 +263,13 @@ export class QueueService implements OnApplicationBootstrap {
   ): Promise<BalancePair | undefined> => {
     const balanceFunction = BalanceFunctionMapping[qs.balanceFunctionType];
     if (pool.flatMap((it) => it.players).length < 2) return;
-    // If we have a pair party, match them
+
+    // Fast path: party of 2 plays against each other
+    const duoParty = pool.find((p) => p.players.length === 2);
+    if (duoParty) {
+      return { left: [duoParty], right: [duoParty] };
+    }
+
     return findBestMatchBy(
       pool,
       balanceFunction,

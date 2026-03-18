@@ -1,4 +1,9 @@
-import { createParties, testUser, useFullModule } from "@/test/useFullModule";
+import {
+  createParties,
+  createParty,
+  testUser,
+  useFullModule,
+} from "@/test/useFullModule";
 import { RoomService } from "@/matchmaker/service/room.service";
 import { GameBalance } from "@/matchmaker/balance/game-balance";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
@@ -81,6 +86,27 @@ describe("RoomService", () => {
       );
       // then
       await expect(createRoom).rejects.toThrow("insert or update on table");
+    });
+
+    it("should create room with split party for solomid", async () => {
+      // given
+      const u1 = testUser();
+      const u2 = testUser();
+      const party = await createParty(te, [MatchmakingMode.SOLOMID], [u1, u2]);
+
+      // when
+      const rs = te.module.get(RoomService);
+      const room = await rs.createRoom(
+        new GameBalance(MatchmakingMode.SOLOMID, [party], [party]),
+      );
+
+      // then
+      expect(room.players).toHaveLength(2);
+      expect(room.players[0].partyId).toBe(party.id);
+      expect(room.players[1].partyId).toBe(party.id);
+      expect(room.players[0].team).not.toBe(room.players[1].team);
+      const steamIds = room.players.map((p) => p.steamId).sort();
+      expect(steamIds).toEqual([u1, u2].sort());
     });
 
     it("should fail if player already in another room", async () => {

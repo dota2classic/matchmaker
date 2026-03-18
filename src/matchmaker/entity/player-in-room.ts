@@ -4,7 +4,6 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
-  OneToOne,
   PrimaryColumn,
   Relation,
 } from "typeorm";
@@ -26,7 +25,7 @@ export class PlayerInRoom {
   @PrimaryColumn({ type: "uuid", name: "room_id" })
   roomId: string;
 
-  @OneToOne(() => Party)
+  @ManyToOne(() => Party)
   @JoinColumn({
     referencedColumnName: "id",
     name: "party_id",
@@ -55,7 +54,12 @@ export class PlayerInRoom {
   })
   team: DotaTeam;
 
-  constructor(roomId: string, partyId: string, steamId: string, team: DotaTeam) {
+  constructor(
+    roomId: string,
+    partyId: string,
+    steamId: string,
+    team: DotaTeam,
+  ) {
     this.roomId = roomId;
     this.partyId = partyId;
     this.steamId = steamId;

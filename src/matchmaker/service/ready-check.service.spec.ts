@@ -4,6 +4,8 @@ import {
   testUser,
   useFullModule,
 } from "@/test/useFullModule";
+import { RoomService } from "@/matchmaker/service/room.service";
+import { GameBalance } from "@/matchmaker/balance/game-balance";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { ReadyCheckService } from "@/matchmaker/service/ready-check.service";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
@@ -159,6 +161,63 @@ describe("ReadyCheckService", () => {
           Dota2Version.Dota_684,
         ),
       );
+    });
+
+    it("should not return party to queue when one player in solomid duo declines", async () => {
+      // given
+      const u1 = testUser();
+      const u2 = testUser();
+      // Party is not inQueue — leaveQueue was already called when room was created
+      const p1 = await createParty(te, [MatchmakingMode.SOLOMID], [u1, u2]);
+
+      const roomService = te.module.get(RoomService);
+      const room = await roomService.createRoom(
+        new GameBalance(MatchmakingMode.SOLOMID, [p1], [p1]),
+      );
+
+      await rs.startReadyCheck(room);
+
+      // when - one player declines
+      await rs.submitReadyCheck(room.id, u2, ReadyState.DECLINE);
+
+      // then - party should NOT be returned to queue since both players share same partyId
+      await expect(
+        partyRepository.findOne({ where: { id: p1.id } }),
+      ).resolves.toMatchObject({ inQueue: false });
+    });
+
+    it("should emit RoomReadyEvent with correct teams for solomid duo", async () => {
+      // given
+      const u1 = testUser();
+      const u2 = testUser();
+      const p1 = await createParty(te, [MatchmakingMode.SOLOMID], [u1, u2]);
+
+      const roomService = te.module.get(RoomService);
+      const room = await roomService.createRoom(
+        new GameBalance(MatchmakingMode.SOLOMID, [p1], [p1]),
+      );
+
+      await rs.startReadyCheck(room);
+
+      // all accept
+      await pirRepository.update(
+        { roomId: room.id },
+        { readyState: ReadyState.READY },
+      );
+
+      // when
+      await rs.finishReadyCheck(room.id);
+
+      // then
+      const call = te.ebusSpy.mock.calls.find(
+        (c: any) => c[0] instanceof RoomReadyEvent,
+      );
+      expect(call).toBeDefined();
+      const event: RoomReadyEvent = call![0];
+      expect(event.players).toHaveLength(2);
+      expect(event.players[0].partyId).toBe(p1.id);
+      expect(event.players[1].partyId).toBe(p1.id);
+      expect(event.players[0].team).not.toBe(event.players[1].team);
     });
 
     // TODO: fix test

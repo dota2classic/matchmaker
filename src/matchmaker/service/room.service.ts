@@ -28,6 +28,15 @@ export class RoomService {
   }
 
   public async createRoom(balance: GameBalance): Promise<Room> {
+    // Special case: party of 2 matched against itself (solomid 1v1)
+    if (
+      balance.left.length === 1 &&
+      balance.right.length === 1 &&
+      balance.left[0].id === balance.right[0].id
+    ) {
+      return this.createIntraPartyRoom(balance);
+    }
+
     return await this.datasource.transaction(async (em) => {
       let room = new Room(balance.mode);
       room = await em.save(room);
@@ -56,6 +65,26 @@ export class RoomService {
               ),
           ),
       );
+
+      return room;
+    });
+  }
+
+  private async createIntraPartyRoom(balance: GameBalance): Promise<Room> {
+    return await this.datasource.transaction(async (em) => {
+      let room = new Room(balance.mode);
+      room = await em.save(room);
+
+      const party = balance.left[0];
+      const [team1, team2] =
+        Math.random() > 0.5
+          ? [DotaTeam.RADIANT, DotaTeam.DIRE]
+          : [DotaTeam.DIRE, DotaTeam.RADIANT];
+
+      room.players = await em.save([
+        new PlayerInRoom(room.id, party.id, party.players[0].steamId, team1),
+        new PlayerInRoom(room.id, party.id, party.players[1].steamId, team2),
+      ]);
 
       return room;
     });
