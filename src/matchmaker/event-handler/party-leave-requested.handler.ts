@@ -1,4 +1,4 @@
-import { EventBus, EventsHandler, IEventHandler } from "@nestjs/cqrs";
+import { EventsHandler, IEventHandler } from "@nestjs/cqrs";
 import { PartyLeaveRequestedEvent } from "@/gateway/events/party/party-leave-requested.event";
 import { PartyService } from "@/matchmaker/service/party.service";
 
@@ -6,14 +6,9 @@ import { PartyService } from "@/matchmaker/service/party.service";
 export class PartyLeaveRequestedHandler
   implements IEventHandler<PartyLeaveRequestedEvent>
 {
-  constructor(
-    private readonly partyService: PartyService,
-    private readonly ebus: EventBus,
-  ) {}
+  constructor(private readonly partyService: PartyService) {}
 
   async handle(event: PartyLeaveRequestedEvent) {
-    await this.partyService.leaveCurrentParty(event.steamId);
-    const p = await this.partyService.getOrCreatePartyOf(event.steamId);
-    await this.ebus.publish(p.snapshotEvent());
+    await this.partyService.leaveCurrentParty(event.steamId, true);
   }
 }

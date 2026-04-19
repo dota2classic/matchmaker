@@ -291,6 +291,78 @@ describe("PartyService", () => {
     });
   });
 
+  describe("kickFromParty", () => {
+    it("should kick target if kicker is leader", async () => {
+      const leader = testUser();
+      const member = testUser();
+      const p = await createParty(
+        te,
+        [MatchmakingMode.UNRANKED],
+        [leader, member],
+        true,
+        leader,
+      );
+
+      await partyService.kickFromParty(leader, member);
+
+      await expectPartyHasPlayer(p.id, leader);
+      await expectPartyHasNotPlayer(p.id, member);
+      await expectPartyInQueue(p.id, false);
+    });
+
+    it("should not kick if kicker is not the leader", async () => {
+      const leader = testUser();
+      const member = testUser();
+      const p = await createParty(te, [], [leader, member], false, leader);
+
+      await partyService.kickFromParty(member, leader);
+
+      await expectPartyHasPlayer(p.id, leader);
+      await expectPartyHasPlayer(p.id, member);
+      expect(te.ebusSpy).toBeCalledTimes(0);
+    });
+
+    it("should not kick if target is self", async () => {
+      const leader = testUser();
+      const member = testUser();
+      const p = await createParty(te, [], [leader, member], false, leader);
+
+      await partyService.kickFromParty(leader, leader);
+
+      await expectPartyHasPlayer(p.id, leader);
+      expect(te.ebusSpy).toBeCalledTimes(0);
+    });
+
+    it("should not kick if target is not in party", async () => {
+      const leader = testUser();
+      const outsider = testUser();
+      const p = await createParty(te, [], [leader], false, leader);
+
+      await partyService.kickFromParty(leader, outsider);
+
+      await expectPartyHasPlayer(p.id, leader);
+      expect(te.ebusSpy).toBeCalledTimes(0);
+    });
+
+    it("should emit party update for remaining party and kicked player's solo party", async () => {
+      const leader = testUser();
+      const member = testUser();
+      const p = await createParty(te, [], [leader, member], false, leader);
+
+      await partyService.kickFromParty(leader, member);
+
+      expectPartyUpdate(te.ebusSpy, p.id, [leader], false, [], 1);
+      expect(te.ebusSpy).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          leaderId: member,
+          players: [member],
+          inQueue: false,
+        }),
+      );
+    });
+  });
+
   describe("leaveParty", () => {
     it("should leave from party if party exists", async () => {
       // given

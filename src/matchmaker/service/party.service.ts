@@ -191,7 +191,7 @@ WHERE NOT EXISTS (
     await this.queue.leaveQueue([invite.party], true);
   }
 
-  public async leaveCurrentParty(steamId: string) {
+  public async leaveCurrentParty(steamId: string, emitSoloPartyEvent = false) {
     const party = await this.findPartyOf(steamId);
     if (!party) return;
 
@@ -238,6 +238,22 @@ WHERE NOT EXISTS (
         await this.ebus.publish(partyMembership.party.snapshotEvent());
       }
     });
+
+    if (emitSoloPartyEvent) {
+      const soloParty = await this.getOrCreatePartyOf(steamId);
+      this.ebus.publish(soloParty.snapshotEvent());
+    }
+  }
+
+  public async kickFromParty(kickerId: string, targetId: string) {
+    const party = await this.findPartyOf(kickerId);
+    if (!party) return;
+
+    if (party.leader !== kickerId) return;
+    if (kickerId === targetId) return;
+    if (!party.players.find((p) => p.steamId === targetId)) return;
+
+    await this.leaveCurrentParty(targetId, true);
   }
 
   async resetQueueTimer(partyIds: string[]) {

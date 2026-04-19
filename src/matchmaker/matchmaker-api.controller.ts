@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param, Post } from "@nestjs/common";
 import { QueryBus } from "@nestjs/cqrs";
 import { GetUserRoomQuery } from "@/gateway/queries/GetUserRoom/get-user-room.query";
 import { GetUserRoomQueryResult } from "@/gateway/queries/GetUserRoom/get-user-room-query.result";
@@ -9,11 +9,15 @@ import {
 import { GetPartyQuery } from "@/gateway/queries/GetParty/get-party.query";
 import { GetPartyQueryResult } from "@/gateway/queries/GetParty/get-party-query.result";
 import { ApiTags } from "@nestjs/swagger";
+import { PartyService } from "@/matchmaker/service/party.service";
 
 @Controller()
 @ApiTags("matchmaker")
 export class MatchmakerApiController {
-  constructor(private readonly qbus: QueryBus) {}
+  constructor(
+    private readonly qbus: QueryBus,
+    private readonly partyService: PartyService,
+  ) {}
 
   @Get("/player/:id/room")
   public async getUserRoom(
@@ -37,5 +41,13 @@ export class MatchmakerApiController {
     return await this.qbus.execute<GetPartyQuery, GetPartyQueryResult>(
       new GetPartyQuery(steamId),
     );
+  }
+
+  @Post("/party/:leaderId/kick/:targetId")
+  public async kickFromParty(
+    @Param("leaderId") leaderId: string,
+    @Param("targetId") targetId: string,
+  ): Promise<void> {
+    await this.partyService.kickFromParty(leaderId, targetId);
   }
 }
