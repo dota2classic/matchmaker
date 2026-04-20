@@ -107,6 +107,26 @@ WHERE NOT EXISTS (
     );
   }
 
+  async returnGoodPlayersToQueues(goodSteamIds: string[]) {
+    const goodSet = new Set(goodSteamIds);
+
+    const parties = await this.partyRepository
+      .createQueryBuilder("p")
+      .leftJoinAndSelect("p.players", "players")
+      .where("players.steam_id IN (:...steamIds)", { steamIds: goodSteamIds })
+      .getMany();
+
+    const fullyGoodParties = parties.filter((party) =>
+      party.players.every((plr) => goodSet.has(plr.steamId)),
+    );
+
+    await Promise.all(
+      fullyGoodParties.map((party) =>
+        this.queue.enterQueue(party, party.queueModes, false),
+      ),
+    );
+  }
+
   public async invitePlayerToParty(inviter: string, invited: string) {
     const p = await this.getOrCreatePartyOf(inviter);
 
