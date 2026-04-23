@@ -2,7 +2,10 @@ import { Injectable, Logger, Optional } from "@nestjs/common";
 import { Room } from "@/matchmaker/entity/room";
 import { ReadyState } from "@/gateway/events/ready-state-received.event";
 import { ReadyCheckStartedEvent } from "@/gateway/events/ready-check-started.event";
-import { PlayerDeclinedGameEvent } from "@/gateway/events/mm/player-declined-game.event";
+import {
+  DeclineReason,
+  PlayerDeclinedGameEvent,
+} from "@/gateway/events/mm/player-declined-game.event";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { EventBus } from "@nestjs/cqrs";
@@ -195,7 +198,13 @@ export class ReadyCheckService {
     // Report bad piggies
     for (const plr of notAccepted) {
       this.ebus.publish(
-        new PlayerDeclinedGameEvent(plr.steamId, room.lobbyType),
+        new PlayerDeclinedGameEvent(
+          plr.steamId,
+          room.lobbyType,
+          plr.readyState === ReadyState.TIMEOUT
+            ? DeclineReason.TIMEOUT
+            : DeclineReason.DECLINED,
+        ),
       );
     }
 
