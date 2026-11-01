@@ -35,6 +35,7 @@ describe("live queue / shadow boundary", () => {
         update: jest.fn().mockResolvedValue({}),
       };
       const shadow = {
+        selectLive: jest.fn((balance) => balance),
         schedule: jest.fn(() => {
           if (fails) throw new Error("shadow unavailable");
         }),
@@ -58,6 +59,7 @@ describe("live queue / shadow boundary", () => {
         "live-room",
         balance,
         settings,
+        balance,
       );
       expect(repo.update).toHaveBeenLastCalledWith(
         { mode: MatchmakingMode.UNRANKED },

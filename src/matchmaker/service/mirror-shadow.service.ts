@@ -27,9 +27,10 @@ export class MirrorShadowService {
     roomId: string,
     balance: GameBalance,
     settings: QueueSettings,
+    appliedBalance: GameBalance = balance,
   ): void {
     if (
-      this.config.get<boolean>("mirrorShadow.enabled") !== true ||
+      this.config.get<boolean>("mirrorShadow.enabled") === false ||
       balance.mode !== MatchmakingMode.UNRANKED
     )
       return;
@@ -40,32 +41,10 @@ export class MirrorShadowService {
       return;
     }
     try {
-      const input: MirrorInput = {
-        version: "mirror-shadow-v1",
-        scope: "selected-ten",
-        capturedAt: new Date().toISOString(),
-        leftPartyIds: balance.left.map((p) => p.id),
-        rightPartyIds: balance.right.map((p) => p.id),
-        maxTeamScoreDifference: settings.maxTeamScoreDifference,
-        maxPlayerScoreDifference: settings.maxPlayerScoreDifference,
-        balanceFunction: settings.balanceFunctionType,
-        parties: [...balance.left, ...balance.right].map((party) => ({
-          id: party.id,
-          score: party.score,
-          enteredAt: party.enterQueueAt
-            ? new Date(party.enterQueueAt).toISOString()
-            : null,
-          dodgeList: [...party.dodgeList],
-          players: party.players.map((p) => ({
-            id: p.steamId,
-            score: p.score,
-            mmr: p.seasonMmr ?? null,
-            pvpGames: p.pvpGames ?? null,
-            statsAt: p.balanceStatsAt
-              ? new Date(p.balanceStatsAt).toISOString()
-              : null,
-          })),
-        })),
+      const input = this.snapshot(balance, settings);
+      input.appliedAssignment = {
+        leftPartyIds: appliedBalance.left.map((p) => p.id),
+        rightPartyIds: appliedBalance.right.map((p) => p.id),
       };
       this.pending++;
       setImmediate(() => {
@@ -82,6 +61,62 @@ export class MirrorShadowService {
         error: String(error),
       });
     }
+  }
+
+  selectLive(balance: GameBalance, settings: QueueSettings): GameBalance {
+    if (
+      balance.mode !== MatchmakingMode.UNRANKED ||
+      this.config.get<boolean>("mirrorLive.enabled") === false
+    )
+      return balance;
+    try {
+      const result = compareMirror(this.snapshot(balance, settings));
+      const variant = result.variants?.find((v) => v.budget === 500);
+      if (!variant || !variant.changed) return balance;
+      const parties = new Map(
+        [...balance.left, ...balance.right].map((p) => [p.id, p]),
+      );
+      return new GameBalance(
+        balance.mode,
+        variant.leftPartyIds.map((id) => parties.get(id)!),
+        variant.rightPartyIds.map((id) => parties.get(id)!),
+      );
+    } catch (error) {
+      this.logger.warn("Live mirror failed; using original assignment", {
+        error: String(error),
+      });
+      return balance;
+    }
+  }
+
+  private snapshot(balance: GameBalance, settings: QueueSettings): MirrorInput {
+    return {
+      version: "mirror-shadow-v1",
+      scope: "selected-ten",
+      capturedAt: new Date().toISOString(),
+      leftPartyIds: balance.left.map((p) => p.id),
+      rightPartyIds: balance.right.map((p) => p.id),
+      maxTeamScoreDifference: settings.maxTeamScoreDifference,
+      maxPlayerScoreDifference: settings.maxPlayerScoreDifference,
+      balanceFunction: settings.balanceFunctionType,
+      parties: [...balance.left, ...balance.right].map((party) => ({
+        id: party.id,
+        score: party.score,
+        enteredAt: party.enterQueueAt
+          ? new Date(party.enterQueueAt).toISOString()
+          : null,
+        dodgeList: [...party.dodgeList],
+        players: party.players.map((p) => ({
+          id: p.steamId,
+          score: p.score,
+          mmr: p.seasonMmr ?? null,
+          pvpGames: p.pvpGames ?? null,
+          statsAt: p.balanceStatsAt
+            ? new Date(p.balanceStatsAt).toISOString()
+            : null,
+        })),
+      })),
+    };
   }
 
   private async record(roomId: string, input: MirrorInput): Promise<void> {

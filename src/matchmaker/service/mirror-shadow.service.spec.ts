@@ -50,6 +50,33 @@ function setup(enabled = true) {
 }
 
 describe("MirrorShadowService isolation", () => {
+  it("applies the 500 alternative to the same ten players without mutating baseline", () => {
+    const { service, balance, settings } = setup();
+    const live = service.selectLive(balance, settings);
+    expect(live).not.toBe(balance);
+    for (const team of [live.left, live.right]) {
+      expect(
+        team.flatMap((p) => p.players).filter((p) => p.pvpGames! < 10),
+      ).toHaveLength(1);
+    }
+    expect(
+      balance.right.flatMap((p) => p.players).filter((p) => p.pvpGames! < 10),
+    ).toHaveLength(2);
+    expect(new Set([...live.left, ...live.right].map((p) => p.id))).toEqual(
+      new Set([...balance.left, ...balance.right].map((p) => p.id)),
+    );
+  });
+  it("uses the baseline when live is disabled or experience is unknown", () => {
+    const disabled = setup(false);
+    expect(
+      disabled.service.selectLive(disabled.balance, disabled.settings),
+    ).toBe(disabled.balance);
+    const unknown = setup();
+    unknown.balance.left[0].players[0].pvpGames = null;
+    expect(unknown.service.selectLive(unknown.balance, unknown.settings)).toBe(
+      unknown.balance,
+    );
+  });
   beforeEach(() => {
     jest.spyOn(Logger.prototype, "log").mockImplementation(() => {});
     jest.spyOn(Logger.prototype, "warn").mockImplementation(() => {});

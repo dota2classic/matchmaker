@@ -1,3 +1,9 @@
+# Live mirror rollout update
+
+Live mirror-500 and observational shadow are now enabled by default. Set MATCHMAKING_MIRROR_LIVE_ENABLED=false to restore the original team assignment while preserving FIFO selection and recording. Set MATCHMAKING_MIRROR_SHADOW_ENABLED=false to stop recording. Explicit false is the kill switch; an absent variable enables the feature.
+
+The main algorithm selects ten players, then selectLive applies the valid mirror-500 assignment. Missing/invalid profiles or exceptions fall back to the original assignment. Logging retains both original inputs and appliedAssignment; mirror-1000 remains observational only. No additional waiting or skill-limit relaxation is introduced by this assignment step. The initial deployment needs the additive migration below. The following original design notes are superseded wherever they describe observational-only or default-off behavior.
+
 # Mirror shadow comparison for ordinary 5v5
 
 The shadow component preserves the live score formula and does not replace team assignments. It captures lifetime PvP experience independently and compares alternative assignments of the **same ten selected players** after the live room has been created and published. It does not implement alternative pool selection, hidden performance ratings or role matching. The accompanying live oldest-first selection fix is described separately in [queue-fairness.md](queue-fairness.md).

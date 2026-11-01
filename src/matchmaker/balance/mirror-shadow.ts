@@ -16,6 +16,7 @@ export interface MirrorParty {
 }
 
 export interface MirrorInput {
+  appliedAssignment?: { leftPartyIds: string[]; rightPartyIds: string[] };
   version: "mirror-shadow-v1";
   scope: "selected-ten";
   capturedAt: string;

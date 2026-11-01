@@ -169,12 +169,16 @@ export class QueueService implements OnApplicationBootstrap {
   ) {
     for (const balance of balances) {
       try {
-        const room = await this.roomService.createRoom(balance);
-        await this.queue.leaveQueue(balance.left.concat(balance.right), false);
+        const liveBalance = this.mirrorShadow.selectLive(balance, settings);
+        const room = await this.roomService.createRoom(liveBalance);
+        await this.queue.leaveQueue(
+          liveBalance.left.concat(liveBalance.right),
+          false,
+        );
         // Ok we're good
-        this.ebus.publish(new RoomCreatedEvent(room.id, balance));
+        this.ebus.publish(new RoomCreatedEvent(room.id, liveBalance));
         try {
-          this.mirrorShadow.schedule(room.id, balance, settings);
+          this.mirrorShadow.schedule(room.id, balance, settings, liveBalance);
         } catch (error) {
           this.logger.warn("Mirror shadow scheduling failed", {
             room_id: room.id,
