@@ -34,6 +34,15 @@ export class PlayerInParty {
   })
   score: number;
 
+  @Column({ name: "pvp_games", type: "int", nullable: true })
+  pvpGames: number | null = null;
+
+  @Column({ name: "season_mmr", type: "float", nullable: true })
+  seasonMmr: number | null = null;
+
+  @Column({ name: "balance_stats_at", type: "timestamptz", nullable: true })
+  balanceStatsAt: Date | null = null;
+
   constructor(steamId: string, partyId: string, isLeader: boolean) {
     this.steamId = steamId;
     this.partyId = partyId;

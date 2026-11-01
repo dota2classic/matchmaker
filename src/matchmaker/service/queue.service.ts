@@ -28,6 +28,7 @@ import {
 import { takeWhileNotDodged } from "@/util/take-while-not-dodged";
 import { BalanceFunctionMapping } from "@/matchmaker/balance/balance-function-type";
 import { BalanceFunction } from "@/matchmaker/balance/balance-functions";
+import { MirrorShadowService } from "@/matchmaker/service/mirror-shadow.service";
 
 @Injectable()
 export class QueueService implements OnApplicationBootstrap {
@@ -101,6 +102,7 @@ export class QueueService implements OnApplicationBootstrap {
     private readonly ebus: EventBus,
     @InjectRepository(QueueSettings)
     private readonly queueSettingsRepository: Repository<QueueSettings>,
+    private readonly mirrorShadow: MirrorShadowService,
   ) {}
 
   @Cron(CronExpression.EVERY_SECOND)
@@ -140,7 +142,7 @@ export class QueueService implements OnApplicationBootstrap {
 
       const balances = await this.findGamesForConfig(algo, entries, setting);
       this.logger.log(`Found balances ${balances.length}`);
-      await this.submitFoundGames(balances);
+      await this.submitFoundGames(balances, setting);
       const timeTaken = Date.now() - start;
       this.logger.log(`Full cycle took ${timeTaken} millis`, {
         lobby_type: setting.mode,
@@ -161,13 +163,24 @@ export class QueueService implements OnApplicationBootstrap {
     }
   }
 
-  private async submitFoundGames(balances: GameBalance[]) {
+  private async submitFoundGames(
+    balances: GameBalance[],
+    settings: QueueSettings,
+  ) {
     for (const balance of balances) {
       try {
         const room = await this.roomService.createRoom(balance);
         await this.queue.leaveQueue(balance.left.concat(balance.right), false);
         // Ok we're good
         this.ebus.publish(new RoomCreatedEvent(room.id, balance));
+        try {
+          this.mirrorShadow.schedule(room.id, balance, settings);
+        } catch (error) {
+          this.logger.warn("Mirror shadow scheduling failed", {
+            room_id: room.id,
+            error: String(error),
+          });
+        }
       } catch (e) {
         this.logger.warn("There was an issue creating room", e);
       }
@@ -247,10 +260,13 @@ export class QueueService implements OnApplicationBootstrap {
         FixedTeamSizePredicate(teamSize),
         MakeMaxScoreDifferencePredicate(maxTeamScoreDifference),
         MakeMaxPlayerScoreDeviationPredicate(maxPlayerScoreDifference),
-        LongQueuePopPredicate(pool, 1000 * 60 * 20), // At most 20 minutes
+        ...(teamSize === 5
+          ? []
+          : [LongQueuePopPredicate(pool, 1000 * 60 * 20)]),
         DodgeListPredicate,
       ],
       teamSize,
+      teamSize === 5,
     );
   }
 

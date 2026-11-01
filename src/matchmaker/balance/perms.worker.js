@@ -1,6 +1,6 @@
 // src/workers/heavy.worker.ts
 const { parentPort, workerData } = require("worker_threads");
-console.log(__dirname)
+console.log(__dirname);
 const { findBestMatchBy } = require("./perms");
 
 // show fatal errors in worker stderr
@@ -11,7 +11,14 @@ process.on("unhandledRejection", (r) => {
   console.error("Unhandled rejection in worker:", r);
 });
 
-function heavyCompute(pool, scoreFn, predicates, timeLimitation = 10000, maxTeamSize = undefined) {
+function heavyCompute(
+  pool,
+  scoreFn,
+  predicates,
+  timeLimitation = 10000,
+  maxTeamSize = undefined,
+  preferOldest = false,
+) {
   const compiledPredicates = predicates.map((predSerialized) =>
     eval(predSerialized),
   );
@@ -22,6 +29,7 @@ function heavyCompute(pool, scoreFn, predicates, timeLimitation = 10000, maxTeam
     timeLimitation,
     compiledPredicates,
     maxTeamSize,
+    preferOldest,
   );
 
   if (!balance) return undefined;
@@ -40,7 +48,21 @@ function heavyCompute(pool, scoreFn, predicates, timeLimitation = 10000, maxTeam
 
 // When running as a worker:
 if (parentPort) {
-  const { pool, scoreFn, predicates, timeLimitation, maxTeamSize } = workerData;
-  const result = heavyCompute(pool, scoreFn, predicates, timeLimitation, maxTeamSize);
+  const {
+    pool,
+    scoreFn,
+    predicates,
+    timeLimitation,
+    maxTeamSize,
+    preferOldest,
+  } = workerData;
+  const result = heavyCompute(
+    pool,
+    scoreFn,
+    predicates,
+    timeLimitation,
+    maxTeamSize,
+    preferOldest,
+  );
   parentPort.postMessage(result);
 }

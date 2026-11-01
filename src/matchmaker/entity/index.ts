@@ -5,6 +5,7 @@ import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
 import { PartyInvite } from "@/matchmaker/entity/party-invite";
 import { QueueSettings } from "@/matchmaker/entity/queue-settings";
 import { QueueEntry } from "@/matchmaker/entity/queue-entry";
+import { MirrorShadowEvaluation } from "@/matchmaker/entity/mirror-shadow-evaluation";
 
 export default [
   Party,
@@ -14,4 +15,5 @@ export default [
   PartyInvite,
   QueueSettings,
   QueueEntry,
+  MirrorShadowEvaluation,
 ];

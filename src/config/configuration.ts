@@ -1,4 +1,5 @@
 export interface ExpectedConfig {
+  mirrorShadow: { enabled: boolean };
   redis: {
     host: string;
     password: string;
@@ -25,6 +26,9 @@ export interface ExpectedConfig {
 
 export default (): ExpectedConfig => {
   return {
+    mirrorShadow: {
+      enabled: process.env.MATCHMAKING_MIRROR_SHADOW_ENABLED === "true",
+    },
     gameserverUrl: process.env.GAMESERVER_API,
     redis: {
       host: process.env.REDIS_HOST || "localhost",

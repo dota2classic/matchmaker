@@ -76,6 +76,7 @@ function bestGame(
   func: (left: Team, right: Team) => number,
   timeLimitation: number,
   predicates: BalancePredicateFn[] = [],
+  oldestFirst: Party[] = [],
 ) {
   const timeStarted = performance.now();
 
@@ -95,7 +96,24 @@ function bestGame(
       continue;
     }
 
-    if (score < bestScore) {
+    let agePreference = 0;
+    if (bestPair && oldestFirst.length) {
+      const selected = new Set([...left, ...right].map((p) => p.id));
+      const previous = new Set(
+        [...bestPair.left, ...bestPair.right].map((p) => p.id),
+      );
+      for (const party of oldestFirst) {
+        if (selected.has(party.id) !== previous.has(party.id)) {
+          agePreference = selected.has(party.id) ? 1 : -1;
+          break;
+        }
+      }
+    }
+    if (
+      !bestPair ||
+      agePreference > 0 ||
+      (agePreference === 0 && score < bestScore)
+    ) {
       bestScore = score;
       bestPair = { left, right };
     }
@@ -110,12 +128,14 @@ export function findBestMatchBy(
   timeLimitation: number,
   predicates: BalancePredicate[] = [],
   maxTeamSize?: number,
+  preferOldest: boolean = false,
 ): BalancePair | undefined {
   return bestGame(
     subsetPairs(pool, maxTeamSize, (p) => p.size),
     func,
     timeLimitation,
     predicates.map((t) => (typeof t === "function" ? t : t.fn)),
+    preferOldest ? pool : [],
   );
 }
 
@@ -125,6 +145,7 @@ export async function findBestMatchByAsync(
   timeLimitation: number,
   predicates: BalancePredicate[] = [],
   maxTeamSize?: number,
+  preferOldest: boolean = false,
 ): Promise<BalancePair | undefined> {
   const serializedPredicates = predicates
     .map((it) => {
@@ -164,6 +185,7 @@ export async function findBestMatchByAsync(
     predicates: serializedPredicates,
     timeLimitation,
     maxTeamSize,
+    preferOldest,
   }).then((data: BalancePair | undefined) => {
     if (!data) return undefined;
 
