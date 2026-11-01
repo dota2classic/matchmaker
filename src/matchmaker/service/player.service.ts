@@ -110,6 +110,17 @@ export class PlayerService {
 
         return {
           score,
+          // Lifetime PvP experience, separate from the seasonal score formula.
+          pvpGames:
+            Number.isSafeInteger(summary.overall?.games) &&
+            summary.overall.games >= 0 &&
+            summary.overall.games <= 2147483647
+              ? summary.overall.games
+              : null,
+          seasonMmr: Number.isFinite(summary.season.mmr)
+            ? summary.season.mmr
+            : null,
+          balanceStatsAt: new Date(),
           dodgeList: dodgeListSteamIds,
           steamId,
         };
@@ -122,8 +133,11 @@ export class PlayerService {
     );
 
     party.players.forEach((plr) => {
-      plr.score =
-        resolvedScores.find((t) => t.steamId === plr.steamId)?.score || 0;
+      const resolved = resolvedScores.find((t) => t.steamId === plr.steamId);
+      plr.score = resolved?.score || 0;
+      plr.pvpGames = resolved?.pvpGames ?? null;
+      plr.seasonMmr = resolved?.seasonMmr ?? null;
+      plr.balanceStatsAt = resolved?.balanceStatsAt ?? null;
     });
 
     party.score = resolvedScores.reduce((a, b) => a + b.score, 0);

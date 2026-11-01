@@ -64,6 +64,9 @@ describe("RoomService", () => {
               isLeader: true,
               party: p,
               score: 0,
+              pvpGames: null,
+              seasonMmr: null,
+              balanceStatsAt: null,
             },
           ];
           p.score = 0;
