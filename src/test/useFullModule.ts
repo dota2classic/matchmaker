@@ -28,7 +28,8 @@ import {
 import { GetSessionByUserQueryResult } from "@/gateway/queries/GetSessionByUser/get-session-by-user-query.result";
 import { MatchAccessLevel } from "@/gateway/shared-types/match-access-level";
 import { QueueSettings } from "@/matchmaker/entity/queue-settings";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { getTypeormConfig } from "@/config/typeorm.config";
 import "@/util/promise";
 import { GenericContainer, StartedTestContainer } from "testcontainers";
 import axios from "axios";
@@ -170,18 +171,19 @@ export function useFullModule(): TestEnvironment {
           isGlobal: true,
         }),
         TypeOrmModule.forRoot({
-          host: te.containers.pg.getHost(),
-          port: te.containers.pg.getFirstMappedPort(),
-
-          type: "postgres",
-          database: "postgres",
-          // logging: true,
-
-          username: te.containers.pg.getUsername(),
-          password: te.containers.pg.getPassword(),
-          entities: Entities,
+          ...getTypeormConfig(
+            new ConfigService({
+              postgres: {
+                host: te.containers.pg.getHost(),
+                port: te.containers.pg.getFirstMappedPort(),
+                username: te.containers.pg.getUsername(),
+                password: te.containers.pg.getPassword(),
+              },
+            }),
+          ),
           migrations: ["dist/src/database/migrations/*.*"],
           migrationsRun: true,
+          logging: false,
           ssl: false,
         }),
         TypeOrmModule.forFeature(Entities),

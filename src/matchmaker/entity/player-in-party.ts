@@ -21,6 +21,7 @@ export class PlayerInParty {
   })
   party: Party;
 
+  @Index("IDX_player_in_party_party_id")
   @Column({ name: "party_id" })
   partyId: string;
 
