@@ -1,7 +1,8 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
-import { RedisOptions, Transport } from "@nestjs/microservices";
+import { RedisOptions } from "@nestjs/microservices";
 import configuration from "@/config/configuration";
+import { getRedisTransportOptions } from "@/config/redis.config";
 import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
@@ -19,15 +20,7 @@ async function bootstrap() {
     // ),
   });
 
-  app.connectMicroservice<RedisOptions>({
-    transport: Transport.REDIS,
-    options: {
-      retryAttempts: 3,
-      retryDelay: 3000,
-      password: config.get("redis.password"),
-      host: config.get("redis.host"),
-    },
-  });
+  app.connectMicroservice<RedisOptions>(getRedisTransportOptions(config));
 
   const options = new DocumentBuilder()
     .setTitle("GameServer api")

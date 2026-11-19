@@ -6,9 +6,10 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm";
 import { CqrsModule } from "@nestjs/cqrs";
 import { ScheduleModule } from "@nestjs/schedule";
-import { ClientsModule, RedisOptions, Transport } from "@nestjs/microservices";
+import { ClientsModule } from "@nestjs/microservices";
 import { MetricsModule } from "./metrics/metrics.module";
 import { getTypeormConfig } from "@/config/typeorm.config";
+import { getRedisTransportOptions } from "@/config/redis.config";
 import { RabbitMQConfig, RabbitMQModule } from "@golevelup/nestjs-rabbitmq";
 import { HealthModule } from "./health/health.module";
 
@@ -38,15 +39,7 @@ import { HealthModule } from "./health/health.module";
       clients: [
         {
           name: "RedisQueue",
-          useFactory(config: ConfigService): RedisOptions {
-            return {
-              transport: Transport.REDIS,
-              options: {
-                host: config.get("redis.host"),
-                password: config.get("redis.password"),
-              },
-            };
-          },
+          useFactory: getRedisTransportOptions,
           inject: [ConfigService],
           imports: [],
         },
