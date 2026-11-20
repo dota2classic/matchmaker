@@ -29,11 +29,12 @@ describe("player experience snapshot", () => {
         },
       };
       const save = jest.fn().mockResolvedValue({});
+      const query = jest.fn().mockResolvedValue([]);
       const service = new PlayerService(
         {} as any,
         {} as any,
         api as any,
-        { transaction: (fn: any) => fn({ save }) } as any,
+        { transaction: (fn: any) => fn({ save, query }) } as any,
         { send: () => of({ roles: [] }) } as any,
       );
       const party = new Party();
@@ -47,6 +48,13 @@ describe("player experience snapshot", () => {
       expect(party.players[0].balanceStatsAt).toBeInstanceOf(Date);
       expect(party.score).toBe(PlayerService.getPlayerScore(1500, 0.5, 2));
       expect(save).toHaveBeenCalledTimes(2);
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining("FOR UPDATE"),
+        ["party"],
+      );
+      expect(query.mock.invocationCallOrder[0]).toBeLessThan(
+        save.mock.invocationCallOrder[0],
+      );
     },
   );
 });

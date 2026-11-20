@@ -16,6 +16,7 @@ import { GetUserInfoQuery } from "@/gateway/queries/GetUserInfo/get-user-info.qu
 import { GetUserInfoQueryResult } from "@/gateway/queries/GetUserInfo/get-user-info-query.result";
 import { PlayerId } from "@/gateway/shared-types/player-id";
 import { Role } from "@/gateway/shared-types/roles";
+import { partyTransaction } from "@/matchmaker/service/party-transaction";
 
 @Injectable()
 export class PlayerService {
@@ -143,7 +144,7 @@ export class PlayerService {
     party.score = resolvedScores.reduce((a, b) => a + b.score, 0);
     party.dodgeList = dodgeList;
 
-    await this.ds.transaction(async (tx) => {
+    await partyTransaction(this.ds, party.id, async (tx) => {
       await tx.save(Party, party);
       await tx.save(PlayerInParty, party.players);
     });
