@@ -2,13 +2,17 @@ import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { Party } from "@/matchmaker/entity/party";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, In, Repository } from "typeorm";
+import { DataSource, EntityManager, In, Repository } from "typeorm";
 import { PlayerService } from "@/matchmaker/service/player.service";
 import { DbMatchmakingQueue } from "@/matchmaker/queue/db-matchmaking.queue";
 import { PartyInvite } from "@/matchmaker/entity/party-invite";
 import { EventBus } from "@nestjs/cqrs";
 import { PartyInviteExpiredEvent } from "@/gateway/events/party/party-invite-expired.event";
 import { Cron, CronExpression } from "@nestjs/schedule";
+
+const ABANDONED_PARTY = `NOT EXISTS (SELECT 1 FROM player_in_party pip WHERE pip.party_id = p.id)
+  AND NOT EXISTS (SELECT 1 FROM player_in_room pir WHERE pir.party_id = p.id)
+  AND NOT EXISTS (SELECT 1 FROM party_invite pi WHERE pi.party_id = p.id)`;
 
 @Injectable()
 export class PartyService {
@@ -61,21 +65,20 @@ export class PartyService {
     });
   }
 
-  @Cron(CronExpression.EVERY_5_SECONDS)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   public async cleanupEmptyParties() {
-    const removed = await this.partyRepository.query(`
-DELETE FROM party p
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM player_in_party pip
-  WHERE pip.party_id = p.id
-) and NOT EXISTS (
-  SELECT 1
-  FROM player_in_room pir
-  WHERE pir.party_id = p.id
-);
-    `);
+    const [, removed] = await this.partyRepository.query(
+      `DELETE FROM party p WHERE ${ABANDONED_PARTY}`,
+    );
     this.logger.log(`Removed ${removed} trash parties`);
+  }
+
+  private async deleteIfAbandoned(em: EntityManager, partyId: string) {
+    await em.query(`SELECT 1 FROM party WHERE id = $1 FOR UPDATE`, [partyId]);
+    await em.query(
+      `DELETE FROM party p WHERE p.id = $1 AND ${ABANDONED_PARTY}`,
+      [partyId],
+    );
   }
 
   @Cron(CronExpression.EVERY_SECOND)
@@ -256,6 +259,8 @@ WHERE NOT EXISTS (
 
       if (partyMembership.party.players.length > 0) {
         await this.ebus.publish(partyMembership.party.snapshotEvent());
+      } else {
+        await this.deleteIfAbandoned(em, partyMembership.partyId);
       }
     });
 

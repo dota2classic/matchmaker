@@ -185,6 +185,9 @@ describe("PartyService", () => {
 
       await expectInviteDeleted(invite.id);
       await expectPartyHasPlayer(invite.partyId, u2);
+      await expect(
+        te.repo(Party).exists({ where: { id: p2.id } }),
+      ).resolves.toEqual(false);
     });
 
     it("should leave previous party with event if not single", async () => {
@@ -406,6 +409,18 @@ describe("PartyService", () => {
           false,
         ),
       );
+    });
+
+    it("should keep an emptied party while its invites are pending", async () => {
+      const leader = testUser();
+      const p = await createParty(te, [], [leader]);
+      await te
+        .repo(PartyInvite)
+        .save(new PartyInvite(p.id, leader, testUser()));
+
+      await partyService.leaveCurrentParty(leader);
+
+      await expectPartyHasNotPlayer(p.id, leader);
     });
   });
 });
