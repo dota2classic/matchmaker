@@ -9,6 +9,7 @@ import { PartyInvite } from "@/matchmaker/entity/party-invite";
 import { EventBus } from "@nestjs/cqrs";
 import { PartyInviteExpiredEvent } from "@/gateway/events/party/party-invite-expired.event";
 import { Cron, CronExpression } from "@nestjs/schedule";
+import { partyTransaction } from "@/matchmaker/service/party-transaction";
 
 const ABANDONED_PARTY = `NOT EXISTS (SELECT 1 FROM player_in_party pip WHERE pip.party_id = p.id)
   AND NOT EXISTS (SELECT 1 FROM player_in_room pir WHERE pir.party_id = p.id)
@@ -74,7 +75,6 @@ export class PartyService {
   }
 
   private async deleteIfAbandoned(em: EntityManager, partyId: string) {
-    await em.query(`SELECT 1 FROM party WHERE id = $1 FOR UPDATE`, [partyId]);
     await em.query(
       `DELETE FROM party p WHERE p.id = $1 AND ${ABANDONED_PARTY}`,
       [partyId],
@@ -177,7 +177,7 @@ export class PartyService {
     await this.leaveCurrentParty(invite.invited);
 
     // Then, join new party
-    await this.datasource.transaction(async (em) => {
+    await partyTransaction(this.datasource, invite.partyId, async (em) => {
       const partySize = await em.count(PlayerInParty, {
         where: {
           partyId: invite.partyId,
@@ -221,12 +221,13 @@ export class PartyService {
     // Leave party from queue
     await this.queue.leaveQueue([party], true);
 
-    await this.datasource.transaction(async (em) => {
+    await partyTransaction(this.datasource, party.id, async (em) => {
       // Find existing membership
       const partyMembership: PlayerInParty | null =
         await em.findOne<PlayerInParty>(PlayerInParty, {
           where: {
             steamId: steamId,
+            partyId: party.id,
           },
           relations: ["party"],
         });
