@@ -12,7 +12,7 @@ import { MirrorShadowEvaluation } from "@/matchmaker/entity/mirror-shadow-evalua
 import { compareMirror, MirrorInput } from "@/matchmaker/balance/mirror-shadow";
 import { ConfigService } from "@nestjs/config";
 import { getTypeormConfig } from "@/config/typeorm.config";
-import { MirrorShadow1793538000000 } from "@/database/migrations/1793538000000-MirrorShadow";
+const MIRROR_MIGRATION_NAME = "MirrorShadow1793538000000";
 
 describe("mirror shadow PostgreSQL migration", () => {
   jest.setTimeout(180_000);
@@ -156,7 +156,7 @@ describe("mirror shadow PostgreSQL migration", () => {
       "SELECT name FROM migrations ORDER BY timestamp DESC",
     );
     const depth =
-      executed.findIndex((m) => m.name === MirrorShadow1793538000000.name) + 1;
+      executed.findIndex((m) => m.name === MIRROR_MIGRATION_NAME) + 1;
     for (let i = 0; i < depth; i++) await db!.undoLastMigration();
     expect(
       await db!.query(

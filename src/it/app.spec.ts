@@ -1,3 +1,4 @@
+import { mockBanInfo } from "@/test/mocks";
 import {
   createParty,
   createRoom,
@@ -81,6 +82,7 @@ describe("AppController (e2e)", () => {
       const p1 = await createParty(te, [MatchmakingMode.SOLOMID], [u1], false);
       const p2 = await createParty(te, [MatchmakingMode.SOLOMID], [u2], false);
 
+      await Promise.all([u1, u2].map((id) => mockBanInfo(te, id, false)));
       const room = await createRoom(te, MatchmakingMode.SOLOMID, [p1], [p2]);
       await te.service(ReadyCheckService).startReadyCheck(room);
 
