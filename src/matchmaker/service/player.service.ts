@@ -18,6 +18,8 @@ import { PlayerId } from "@/gateway/shared-types/player-id";
 import { Role } from "@/gateway/shared-types/roles";
 import { partyTransaction } from "@/matchmaker/service/party-transaction";
 
+type QueuePlayerSummary = PlayerSummaryDto & { educationVerified?: boolean };
+
 @Injectable()
 export class PlayerService {
   private logger = new Logger(PlayerService.name);
@@ -45,7 +47,22 @@ export class PlayerService {
     return userInfo ? userInfo.roles.includes(Role.OLD) : false;
   }
 
+  async canPlayQueuedMode(steamId: string, mode: MatchmakingMode): Promise<boolean> {
+    const { data: ban } = await this.playerApi.player.playerControllerBanInfo(steamId);
+    if (mode !== MatchmakingMode.SECRET) return !ban.isBanned;
+    if (!ban.isBanned) return false;
+
+    const { data: summary } =
+      await this.playerApi.player.playerControllerPlayerSummary(steamId);
+    return this.hasQueueAccess(summary, mode);
+  }
+
   async preparePartyForQueue(party: Party, modes: MatchmakingMode[]) {
+    const secret = modes.includes(MatchmakingMode.SECRET);
+    if (modes.length === 0 || (secret && (modes.length !== 1 || party.size > 5))) {
+      throw new Error("Invalid queue selection");
+    }
+
     const plrs = party.players.map((it) => it.steamId);
 
     const resolvedScores = await Promise.all(
@@ -67,31 +84,13 @@ export class PlayerService {
           throw new Error("Can't queue while in game");
         }
 
-        if (ban.isBanned && modes.includes(MatchmakingMode.UNRANKED)) {
-          throw new Error("Can't queue when banned");
+        if (ban.isBanned !== secret) {
+          throw new Error("The player's ban status does not allow this queue");
         }
 
-        if (
-          ban.isBanned &&
-          new Date(ban.bannedUntil).getTime() >
-            Date.now() + 1000 * 60 * 60 * 24 * 365
-        ) {
-          // It's perma ban
-          throw new Error("Perma banned");
-        }
-
-        // highroom tmp check
         this.assertHighroom(modes, summary);
 
-        if (
-          modes.findIndex(
-            (mode) =>
-              !canQueueMode(
-                summary.accessLevel as unknown as MatchAccessLevel,
-                mode,
-              ),
-          ) !== -1
-        ) {
+        if (modes.some((mode) => !this.hasQueueAccess(summary, mode))) {
           throw new Error("Can't queue this mode");
         }
 
@@ -150,6 +149,13 @@ export class PlayerService {
     });
 
     return party;
+  }
+
+  private hasQueueAccess(summary: QueuePlayerSummary, mode: MatchmakingMode): boolean {
+    if (mode === MatchmakingMode.SECRET && summary.educationVerified !== true) {
+      return false;
+    }
+    return canQueueMode(summary.accessLevel as unknown as MatchAccessLevel, mode);
   }
 
   private assertHighroom(modes: MatchmakingMode[], summary: PlayerSummaryDto) {

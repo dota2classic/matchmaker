@@ -28,6 +28,7 @@ import {
 import { takeWhileNotDodged } from "@/util/take-while-not-dodged";
 import { BalanceFunctionMapping } from "@/matchmaker/balance/balance-function-type";
 import { BalanceFunction } from "@/matchmaker/balance/balance-functions";
+import { PlayerService } from "@/matchmaker/service/player.service";
 import { MirrorShadowService } from "@/matchmaker/service/mirror-shadow.service";
 
 @Injectable()
@@ -45,6 +46,19 @@ export class QueueService implements OnApplicationBootstrap {
           BalanceFunctionMapping[qs.balanceFunctionType],
           5,
           30_000,
+          qs.maxTeamScoreDifference,
+          qs.maxPlayerScoreDifference,
+        ),
+    },
+    {
+      mode: MatchmakingMode.SECRET,
+      priority: 100,
+      findGames: (entries, qs) =>
+        this.findBalancedGame(
+          entries,
+          BalanceFunctionMapping[qs.balanceFunctionType],
+          5,
+          5_000,
           qs.maxTeamScoreDifference,
           qs.maxPlayerScoreDifference,
         ),
@@ -103,6 +117,7 @@ export class QueueService implements OnApplicationBootstrap {
     @InjectRepository(QueueSettings)
     private readonly queueSettingsRepository: Repository<QueueSettings>,
     private readonly mirrorShadow: MirrorShadowService,
+    private readonly players: PlayerService,
   ) {}
 
   @Cron(CronExpression.EVERY_SECOND)
@@ -131,7 +146,20 @@ export class QueueService implements OnApplicationBootstrap {
         { mode: setting.mode },
         { inProgress: true },
       );
-      const entries = await this.queue.entries();
+      let entries = await this.queue.entries();
+      if (setting.mode === MatchmakingMode.SECRET) {
+        const secretParties = entries.filter((party) => party.queueModes.includes(setting.mode));
+        const eligibility = await Promise.all(secretParties.map(async (party) => ({
+          party,
+          allowed: (await Promise.all(party.players.map((player) =>
+            this.players.canPlayQueuedMode(player.steamId, setting.mode),
+          ))).every(Boolean),
+        })));
+        const invalid = eligibility.filter(({ allowed }) => !allowed).map(({ party }) => party);
+        await this.queue.leaveQueue(invalid, true);
+        const invalidIds = new Set(invalid.map((party) => party.id));
+        entries = entries.filter((party) => !invalidIds.has(party.id));
+      }
       this.logger.log(`Acquire entries ${entries.length}`);
       const algo = this.modeBalancingMap.find((t) => t.mode === setting.mode);
       if (!algo) {

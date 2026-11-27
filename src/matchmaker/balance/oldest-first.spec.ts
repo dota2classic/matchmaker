@@ -74,6 +74,7 @@ describe("oldest feasible groups first", () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
     const settings = Object.assign(new QueueSettings(), {
       maxTeamScoreDifference: 3500,
@@ -89,4 +90,37 @@ describe("oldest feasible groups first", () => {
       [...results[0].left, ...results[0].right].map((p) => p.id),
     ).not.toContain(parties[0].id);
   });
+});
+
+it("builds SECRET only from ten eligible players and keeps parties intact", async () => {
+  const parties = pool().slice(0, 9);
+  parties.forEach((party) => (party.queueModes = [MatchmakingMode.SECRET]));
+  const otherQueue = pool()[9];
+  otherQueue.queueModes = [MatchmakingMode.UNRANKED];
+  const service = new QueueService({} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+  const settings = Object.assign(new QueueSettings(), {
+    maxTeamScoreDifference: 3500,
+    maxPlayerScoreDifference: 5500,
+    balanceFunctionType: "LOG_WAITING_SCORE",
+  });
+  const config = (service as any).modeBalancingMap.find(
+    (entry: any) => entry.mode === MatchmakingMode.SECRET,
+  );
+
+  await expect(service.findGamesForConfig(config, [...parties, otherQueue], settings))
+    .resolves.toEqual([]);
+
+  const secondMember = fakeParty(1000, ["999"], new Date()).players[0];
+  secondMember.partyId = parties[0].id;
+  parties[0].players.push(secondMember);
+  parties[0].score += secondMember.score;
+  const [game] = await service.findGamesForConfig(config, [...parties, otherQueue], settings);
+  expect(game.mode).toBe(MatchmakingMode.SECRET);
+  expect(game.left.flatMap((party) => party.players)).toHaveLength(5);
+  expect(game.right.flatMap((party) => party.players)).toHaveLength(5);
+  const groupedParty = [...game.left, ...game.right].find((party) => party.id === parties[0].id);
+  expect(groupedParty?.players.map((player) => player.steamId)).toEqual(
+    parties[0].players.map((player) => player.steamId),
+  );
+  expect([...game.left, ...game.right].map((party) => party.id)).not.toContain(otherQueue.id);
 });
