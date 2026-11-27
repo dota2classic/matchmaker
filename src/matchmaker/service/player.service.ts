@@ -47,7 +47,12 @@ export class PlayerService {
 
   async canPlayQueuedMode(steamId: string, mode: MatchmakingMode): Promise<boolean> {
     const { data: ban } = await this.playerApi.player.playerControllerBanInfo(steamId);
-    return ban.isBanned === (mode === MatchmakingMode.SECRET);
+    if (mode !== MatchmakingMode.SECRET) return !ban.isBanned;
+    if (!ban.isBanned) return false;
+
+    const { data: summary } =
+      await this.playerApi.player.playerControllerPlayerSummary(steamId);
+    return canQueueMode(summary.accessLevel as unknown as MatchAccessLevel, mode);
   }
 
   async preparePartyForQueue(party: Party, modes: MatchmakingMode[]) {
@@ -84,7 +89,6 @@ export class PlayerService {
         this.assertHighroom(modes, summary);
 
         if (
-          !secret &&
           modes.some(
             (mode) =>
               !canQueueMode(
