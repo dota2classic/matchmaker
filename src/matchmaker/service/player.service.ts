@@ -18,6 +18,8 @@ import { PlayerId } from "@/gateway/shared-types/player-id";
 import { Role } from "@/gateway/shared-types/roles";
 import { partyTransaction } from "@/matchmaker/service/party-transaction";
 
+type QueuePlayerSummary = PlayerSummaryDto & { educationVerified?: boolean };
+
 @Injectable()
 export class PlayerService {
   private logger = new Logger(PlayerService.name);
@@ -52,7 +54,7 @@ export class PlayerService {
 
     const { data: summary } =
       await this.playerApi.player.playerControllerPlayerSummary(steamId);
-    return canQueueMode(summary.accessLevel as unknown as MatchAccessLevel, mode);
+    return this.hasQueueAccess(summary, mode);
   }
 
   async preparePartyForQueue(party: Party, modes: MatchmakingMode[]) {
@@ -88,15 +90,7 @@ export class PlayerService {
 
         this.assertHighroom(modes, summary);
 
-        if (
-          modes.some(
-            (mode) =>
-              !canQueueMode(
-                summary.accessLevel as unknown as MatchAccessLevel,
-                mode,
-              ),
-          )
-        ) {
+        if (modes.some((mode) => !this.hasQueueAccess(summary, mode))) {
           throw new Error("Can't queue this mode");
         }
 
@@ -155,6 +149,13 @@ export class PlayerService {
     });
 
     return party;
+  }
+
+  private hasQueueAccess(summary: QueuePlayerSummary, mode: MatchmakingMode): boolean {
+    if (mode === MatchmakingMode.SECRET && summary.educationVerified !== true) {
+      return false;
+    }
+    return canQueueMode(summary.accessLevel as unknown as MatchAccessLevel, mode);
   }
 
   private assertHighroom(modes: MatchmakingMode[], summary: PlayerSummaryDto) {

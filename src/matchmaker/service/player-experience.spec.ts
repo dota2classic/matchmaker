@@ -61,7 +61,8 @@ describe("player experience snapshot", () => {
 
 describe("SECRET admission", () => {
   it.each([
-    { bans: [true, true], modes: [MatchmakingMode.SECRET], allowed: true, level: undefined },
+    { bans: [true, true], modes: [MatchmakingMode.SECRET], allowed: true, level: undefined, missingVerification: false },
+    { bans: [true, true], modes: [MatchmakingMode.SECRET], allowed: false, missingVerification: true },
     { bans: [true, true], modes: [MatchmakingMode.SECRET], allowed: false, level: MatchAccessLevel.EDUCATION },
     { bans: [true, true], modes: [MatchmakingMode.SECRET], allowed: false, level: MatchAccessLevel.SIMPLE_MODES },
     { bans: [false, false], modes: [MatchmakingMode.UNRANKED], allowed: false, level: MatchAccessLevel.EDUCATION },
@@ -72,14 +73,18 @@ describe("SECRET admission", () => {
     { bans: [false, true], modes: [MatchmakingMode.TURBO], allowed: false },
     { bans: [true, true], modes: [MatchmakingMode.BOTS], allowed: false },
     { bans: [true, true], modes: [MatchmakingMode.SECRET, MatchmakingMode.BOTS], allowed: false },
-  ])("checks every member for $modes with bans $bans", async ({ bans, modes, allowed, level }) => {
+  ])("checks every member for $modes with bans $bans", async ({ bans, modes, allowed, level, missingVerification }) => {
     const summary = {
       season: { mmr: 1500, games: 2 },
       accessLevel: MatchAccessLevel.HUMAN_GAMES,
     };
     const player = {
       playerControllerPlayerSummary: async (id: string) => ({
-        data: { ...summary, accessLevel: id === "2" ? (level ?? summary.accessLevel) : summary.accessLevel },
+        data: {
+          ...summary,
+          accessLevel: id === "2" ? (level ?? summary.accessLevel) : summary.accessLevel,
+          educationVerified: id === "2" && missingVerification ? undefined : true,
+        },
       }),
       playerControllerBanInfo: async (id: string) => ({
         data: { isBanned: bans[Number(id) - 1], bannedUntil: "2040-01-01T00:00:00Z" },
@@ -100,7 +105,7 @@ describe("SECRET admission", () => {
 
     if (modes.length === 1 && modes[0] === MatchmakingMode.SECRET) {
       await expect(service.canPlayQueuedMode("2", MatchmakingMode.SECRET))
-        .resolves.toBe(bans[1] && level === undefined);
+        .resolves.toBe(bans[1] && level === undefined && !missingVerification);
     }
 
     const preparation = service.preparePartyForQueue(party, modes);
