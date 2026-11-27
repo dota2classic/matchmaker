@@ -17,6 +17,7 @@ import { GetUserInfoQueryResult } from "@/gateway/queries/GetUserInfo/get-user-i
 import { PlayerId } from "@/gateway/shared-types/player-id";
 import { Role } from "@/gateway/shared-types/roles";
 import { partyTransaction } from "@/matchmaker/service/party-transaction";
+import { isSecretQueueBan } from "./secret-ban";
 
 type QueuePlayerSummary = PlayerSummaryDto & { educationVerified?: boolean };
 
@@ -50,7 +51,7 @@ export class PlayerService {
   async canPlayQueuedMode(steamId: string, mode: MatchmakingMode): Promise<boolean> {
     const { data: ban } = await this.playerApi.player.playerControllerBanInfo(steamId);
     if (mode !== MatchmakingMode.SECRET) return !ban.isBanned;
-    if (!ban.isBanned) return false;
+    if (!isSecretQueueBan(ban)) return false;
 
     const { data: summary } =
       await this.playerApi.player.playerControllerPlayerSummary(steamId);
@@ -84,7 +85,7 @@ export class PlayerService {
           throw new Error("Can't queue while in game");
         }
 
-        if (ban.isBanned !== secret) {
+        if (secret ? !isSecretQueueBan(ban) : ban.isBanned) {
           throw new Error("The player's ban status does not allow this queue");
         }
 
