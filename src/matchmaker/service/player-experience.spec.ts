@@ -5,6 +5,7 @@ import { Party } from "@/matchmaker/entity/party";
 import { PlayerInParty } from "@/matchmaker/entity/player-in-party";
 import { MatchmakingMode } from "@/gateway/shared-types/matchmaking-mode";
 import { MatchAccessLevel } from "@/gateway/shared-types/match-access-level";
+import { BanReason } from "@/gateway/shared-types/ban";
 
 describe("player experience snapshot", () => {
   it.each([123, 0, undefined, -1, 1.5, NaN, 2147483648])(
@@ -87,7 +88,7 @@ describe("SECRET admission", () => {
         },
       }),
       playerControllerBanInfo: async (id: string) => ({
-        data: { isBanned: bans[Number(id) - 1], bannedUntil: "2040-01-01T00:00:00Z" },
+        data: { isBanned: bans[Number(id) - 1], status: BanReason.RULE_VIOLATION, bannedUntil: "2040-01-01T00:00:00Z" },
       }),
       playerControllerGetDodgeList: async () => ({ data: [] }),
     };
