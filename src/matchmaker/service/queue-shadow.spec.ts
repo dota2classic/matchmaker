@@ -46,6 +46,7 @@ describe("live queue / shadow boundary", () => {
         events as any,
         repo as any,
         shadow as any,
+        {} as any,
       );
       jest.spyOn(service, "findGamesForConfig").mockResolvedValue([balance]);
       await service.cycle(MatchmakingMode.UNRANKED);

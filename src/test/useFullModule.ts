@@ -183,6 +183,7 @@ export function useFullModule(): TestEnvironment {
           ),
           migrations: ["dist/src/database/migrations/*.*"],
           migrationsRun: true,
+          migrationsTransactionMode: "each",
           logging: false,
           ssl: false,
         }),

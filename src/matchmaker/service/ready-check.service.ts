@@ -7,7 +7,7 @@ import {
   PlayerDeclinedGameEvent,
 } from "@/gateway/events/mm/player-declined-game.event";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, Repository } from "typeorm";
+import { DataSource, IsNull, Repository } from "typeorm";
 import { EventBus } from "@nestjs/cqrs";
 import { PartyService } from "@/matchmaker/service/party.service";
 import { PlayerInRoom } from "@/matchmaker/entity/player-in-room";
@@ -20,6 +20,8 @@ import { RoomNotReadyEvent } from "@/gateway/events/room-not-ready.event";
 import * as assert from "assert";
 import { QueueStatisticsService } from "@/matchmaker/service/queue-statistics.service";
 
+import { PlayerService } from "@/matchmaker/service/player.service";
+
 @Injectable()
 export class ReadyCheckService {
   private readonly logger = new Logger(ReadyCheckService.name);
@@ -31,6 +33,7 @@ export class ReadyCheckService {
     private readonly datasource: DataSource,
     private readonly ebus: EventBus,
     private readonly partyService: PartyService,
+    private readonly players: PlayerService,
     @Optional() private readonly queueStatistics?: QueueStatisticsService,
   ) {}
 
@@ -128,17 +131,21 @@ export class ReadyCheckService {
 
     this.logger.log(`Finishing ready check for room ${roomId}`);
 
-    await this.roomRepository.update(
+    const claimed = await this.roomRepository.update(
       {
         id: roomId,
+        readyCheckFinishedAt: IsNull(),
       },
       { readyCheckFinishedAt: new Date() },
     );
 
-    // Delete room, not needed anymore
-    await this.roomRepository.delete({ id: room.id });
+    if (!claimed.affected) return;
 
     const [accepted, declined] = this.readyCheckResult(room);
+    const eligible = declined.length === 0 && (await this.verifyEligibility(room));
+
+    // Delete room, not needed anymore
+    await this.roomRepository.delete({ id: room.id });
 
     await this.queueStatistics?.recordReadyCheckResult(
       room.id,
@@ -148,8 +155,15 @@ export class ReadyCheckService {
 
     if (declined.length > 0) {
       await this.onFailedRoom(room, accepted, declined);
-    } else {
+    } else if (eligible) {
       await this.onSucceededRoom(room);
+    } else {
+      const partyIds = [...new Set(room.players.map((player) => player.partyId))];
+      await this.partyService.returnToQueues(partyIds);
+      this.ebus.publish(new RoomNotReadyEvent(
+        room.id,
+        room.players.map((player) => player.steamId),
+      ));
     }
   }
 
@@ -245,8 +259,18 @@ export class ReadyCheckService {
     );
   }
 
+  private async verifyEligibility(room: Room): Promise<boolean> {
+    try {
+      return (await Promise.all(room.players.map((player) =>
+        this.players.canPlayQueuedMode(player.steamId, room.lobbyType),
+      ))).every(Boolean);
+    } catch (error) {
+      this.logger.warn("Could not verify ban status for a ready room", error);
+      return false;
+    }
+  }
+
   private async onSucceededRoom(room: Room) {
-    // Emit our event
     this.ebus.publish(
       new RoomReadyEvent(
         room.id,

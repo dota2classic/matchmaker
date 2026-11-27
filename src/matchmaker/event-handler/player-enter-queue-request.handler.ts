@@ -15,7 +15,7 @@ export class PlayerEnterQueueRequestedHandler
 
   async handle(event: PlayerEnterQueueRequestedEvent) {
     const party = await this.partyService.getOrCreatePartyOf(event.id);
-    // We can enter queue if
+    if (party.leader !== event.id) return;
     await this.queue.enterQueue(party, event.modes, true);
   }
 }

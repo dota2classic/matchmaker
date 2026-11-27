@@ -34,6 +34,7 @@ describe("mirror shadow PostgreSQL migration", () => {
       ),
       migrations: [join(process.cwd(), "dist/src/database/migrations/*.js")],
       migrationsRun: true,
+      migrationsTransactionMode: "each",
       logging: false,
     }).initialize();
   });

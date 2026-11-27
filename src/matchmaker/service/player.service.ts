@@ -45,7 +45,17 @@ export class PlayerService {
     return userInfo ? userInfo.roles.includes(Role.OLD) : false;
   }
 
+  async canPlayQueuedMode(steamId: string, mode: MatchmakingMode): Promise<boolean> {
+    const { data: ban } = await this.playerApi.player.playerControllerBanInfo(steamId);
+    return ban.isBanned === (mode === MatchmakingMode.SECRET);
+  }
+
   async preparePartyForQueue(party: Party, modes: MatchmakingMode[]) {
+    const secret = modes.includes(MatchmakingMode.SECRET);
+    if (modes.length === 0 || (secret && (modes.length !== 1 || party.size > 5))) {
+      throw new Error("Invalid queue selection");
+    }
+
     const plrs = party.players.map((it) => it.steamId);
 
     const resolvedScores = await Promise.all(
@@ -67,30 +77,21 @@ export class PlayerService {
           throw new Error("Can't queue while in game");
         }
 
-        if (ban.isBanned && modes.includes(MatchmakingMode.UNRANKED)) {
-          throw new Error("Can't queue when banned");
+        if (ban.isBanned !== secret) {
+          throw new Error("The player's ban status does not allow this queue");
         }
 
-        if (
-          ban.isBanned &&
-          new Date(ban.bannedUntil).getTime() >
-            Date.now() + 1000 * 60 * 60 * 24 * 365
-        ) {
-          // It's perma ban
-          throw new Error("Perma banned");
-        }
-
-        // highroom tmp check
         this.assertHighroom(modes, summary);
 
         if (
-          modes.findIndex(
+          !secret &&
+          modes.some(
             (mode) =>
               !canQueueMode(
                 summary.accessLevel as unknown as MatchAccessLevel,
                 mode,
               ),
-          ) !== -1
+          )
         ) {
           throw new Error("Can't queue this mode");
         }

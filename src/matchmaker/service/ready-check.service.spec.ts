@@ -1,3 +1,4 @@
+import { mockBanInfo } from "@/test/mocks";
 import {
   createParty,
   createRoom,
@@ -147,6 +148,7 @@ describe("ReadyCheckService", () => {
       );
 
       // when
+      await Promise.all([p1.leader, p2.leader].map((id) => mockBanInfo(te, id, false)));
       await rs.finishReadyCheck(room.id);
 
       // then
@@ -206,6 +208,7 @@ describe("ReadyCheckService", () => {
       );
 
       // when
+      await Promise.all([u1, u2].map((id) => mockBanInfo(te, id, false)));
       await rs.finishReadyCheck(room.id);
 
       // then

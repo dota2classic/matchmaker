@@ -58,3 +58,46 @@ describe("player experience snapshot", () => {
     },
   );
 });
+
+describe("SECRET admission", () => {
+  it.each([
+    { bans: [true, true], modes: [MatchmakingMode.SECRET], allowed: true },
+    { bans: [true, false], modes: [MatchmakingMode.SECRET], allowed: false },
+    { bans: [false, false], modes: [MatchmakingMode.SECRET], allowed: false },
+    { bans: [false, false], modes: [MatchmakingMode.UNRANKED], allowed: true },
+    { bans: [false, true], modes: [MatchmakingMode.TURBO], allowed: false },
+    { bans: [true, true], modes: [MatchmakingMode.BOTS], allowed: false },
+    { bans: [true, true], modes: [MatchmakingMode.SECRET, MatchmakingMode.BOTS], allowed: false },
+  ])("checks every member for $modes with bans $bans", async ({ bans, modes, allowed }) => {
+    const summary = {
+      season: { mmr: 1500, games: 2 },
+      accessLevel: MatchAccessLevel.HUMAN_GAMES,
+    };
+    const player = {
+      playerControllerPlayerSummary: async () => ({ data: summary }),
+      playerControllerBanInfo: async (id: string) => ({
+        data: { isBanned: bans[Number(id) - 1], bannedUntil: "2040-01-01T00:00:00Z" },
+      }),
+      playerControllerGetDodgeList: async () => ({ data: [] }),
+    };
+    const save = jest.fn();
+    const service = new PlayerService(
+      {} as any,
+      {} as any,
+      { player } as any,
+      { transaction: (fn: any) => fn({ save, query: jest.fn() }) } as any,
+      { send: () => of({ roles: [] }) } as any,
+    );
+    const party = new Party();
+    party.id = "party";
+    party.players = [new PlayerInParty("1", party.id, true), new PlayerInParty("2", party.id, false)];
+
+    const preparation = service.preparePartyForQueue(party, modes);
+    if (allowed) {
+      await expect(preparation).resolves.toBe(party);
+    } else {
+      await expect(preparation).rejects.toThrow();
+      expect(save).not.toHaveBeenCalled();
+    }
+  });
+});
